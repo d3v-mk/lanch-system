@@ -49,7 +49,7 @@ export function useBotStatus() {
     initSocket()
 
     // Busca status inicial uma única vez
-    fetch('http://localhost:3001/api/bot/status')
+    fetch('http://localhost:3001/api/status')
       .then(res => res.json())
       .then(({ status, qr }) => {
         setBotStatus(status)
@@ -74,7 +74,7 @@ export function useBotStatus() {
     socketRef.current = null
     initSocket()
     try {
-      const res = await fetch('http://localhost:3001/api/bot/status')
+      const res = await fetch('http://localhost:3001/api/status')
       const data = await res.json()
       setBotStatus(data.status)
       setQrCode(data.qr)
@@ -88,7 +88,7 @@ export function useBotStatus() {
     if (connecting || botStatus === 'iniciando') return
     setConnecting(true)
     try {
-      const res = await fetch('http://localhost:3001/api/bot/conectar', { method: 'POST' })
+      const res = await fetch('http://localhost:3001/api/conectar', { method: 'POST' })
       const data = await res.json()
 
       if (!data.ok) {
