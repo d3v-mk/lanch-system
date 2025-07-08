@@ -9,7 +9,7 @@ const router = Router()
 router.use('/pedidos', pedidoRoutes)
 router.use('/produtos', produtoRoutes)
 router.use('/clientes', clientesRouter)
-router.use('/api/chat', chatRouter);
+router.use('/chat', chatRouter);
 
 
 export default router

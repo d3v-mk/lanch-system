@@ -1,43 +1,16 @@
-/**
- * ================================================================
- * 🎮 Simulador de Bot Local (modo terminal) para testes no Arkevia
- * ================================================================
- * 
- * Este script permite testar os comandos do bot localmente via terminal,
- * sem precisar escanear QR Code do WhatsApp ou subir o backend.
- * 
- * 🧪 Ideal para:
- * - Testar comandos rapidamente com diferentes usuários fake
- * - Debugar a lógica do `onMessage.js` no ambiente local
- * - Simular interação como se fosse no WhatsApp
- * 
- * 👤 Exemplo:
- * >> /login user 123456
- * >> /user 5511999998888@c.us
- * >> /status
- * 
- * 💻 Como rodar:
- * 3. No terminal, rode:
- *    node caminho/para/este/script.js
- * 
- * ⚠️ Importante:
- * - O `onMessage` deve aceitar objetos com `.body` e `.reply()`
- * - O sistema pode ser expandido pra simular grupos, botões, etc.
- */
-
 require('dotenv').config();
 require('module-alias/register');
 
 const readline = require('readline');
-const onMessage = require('../src/handlers/onMessageHandler.js');
+const { onMessage } = require('../src/handlers/onMessageHandler.js'); // Importa corretamente a função onMessage
 
 // Mock do sock (cliente WhatsApp) turbo atualizado pra não travar
 const mockSock = {
   sendPresenceUpdate: async (status, jid) => {
-    console.log(`[MOCK] sendPresenceUpdate chamado com status='${status}', jid='${jid}'`);
+    // console.log(`[MOCK] sendPresenceUpdate chamado com status='${status}', jid='${jid}'`); // Descomente para depurar
   },
   sendMessage: async (jid, content) => {
-    console.log(`[MOCK] sendMessage para ${jid} com conteúdo:`, content);
+    console.log(`[MOCK SÓCIO] Mensagem para ${jid}:`, content); // Saída mais clara para sendMessage
   },
   // adiciona aqui mais mocks se precisar (ex: sendReaction, sendReadReceipt...)
 };
@@ -47,25 +20,33 @@ class MockMessage {
   constructor(body, from) {
     this.key = {
       remoteJid: from,
-      fromMe: false,
-      id: 'fake-msg-id-' + Math.random().toString(36).slice(2),
+      fromMe: false, // Mensagens do cliente não são 'fromMe'
+      id: 'fake-msg-id-' + Math.random().toString(36).slice(2), // ID único para cada mensagem mock
     };
     this.message = {
-      conversation: body,
+      conversation: body, // Baileys usa 'conversation' para mensagens de texto simples
     };
-    this.body = body;
-    this.from = from;
+    this.body = body; // Propriedade 'body' direta para facilitar acesso no handler
+    this.pushName = 'Cliente Teste'; // Nome do usuário para simulação
   }
 
+  // Se você tiver uma função reply no seu handler, pode mockar aqui também
   async reply(text) {
     console.log(`[BOT RESPONDEU] ${text}`);
+    // Opcional: Você pode querer que a resposta do bot seja processada de volta como uma mensagem 'fromMe'
+    // const botReplyMsg = new MockMessage(text, this.key.remoteJid);
+    // botReplyMsg.key.fromMe = true;
+    // await onMessage(mockSock, botReplyMsg);
   }
 }
 
 // Função que simula envio da mensagem pro handler, agora com sock
 async function simulateMessage(text, from, sock) {
   const mockMsg = new MockMessage(text, from);
-  await onMessage(mockMsg, sock);
+  console.log(`\n>> [${usuarios[from] || from.split('@')[0]}] Enviando: "${text}"`);
+  
+  // CORREÇÃO: Inverter a ordem dos argumentos para (sock, msg)
+  await onMessage(sock, mockMsg); 
 }
 
 // Usuários fake pra simular troca
@@ -84,7 +65,7 @@ console.log('Bot local iniciado. Digite comandos tipo /login nome senha');
 console.log('Para testar como outro usuário, digite: /user <whatsappId>');
 console.log('Usuários disponíveis:', Object.keys(usuarios).join(', '));
 
-let currentUserId = '5511999992222@c.us';
+let currentUserId = '5511999992222@c.us'; // Usuário padrão de teste
 
 rl.prompt();
 
@@ -103,7 +84,7 @@ rl.on('line', async (line) => {
     return;
   }
 
-  await simulateMessage(line, currentUserId, mockSock);
+  await simulateMessage(line, currentUserId, mockSock); // Passando sock como último argumento
 
   rl.prompt();
 }).on('close', () => {

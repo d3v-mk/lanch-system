@@ -5,7 +5,7 @@ import prisma from '../prismaClient';
 const chatRouter = Router();
 
 // Rota para obter conversas pendentes
-chatRouter.get('/chats/pendentes', async (req, res) => {
+chatRouter.get('/pendentes', async (req, res) => {
   try {
     const conversas = await prisma.conversaAtendimento.findMany({
       where: { status: "PENDENTE" },
@@ -18,8 +18,22 @@ chatRouter.get('/chats/pendentes', async (req, res) => {
   }
 });
 
+// Rota para obter conversas EM ATENDIMENTO
+chatRouter.get('/ativas', async (req, res) => {
+  try {
+    const conversas = await prisma.conversaAtendimento.findMany({
+      where: { status: "EM_ATENDIMENTO" },
+      orderBy: { atualizadoEm: 'desc' }, // Ou por quem pegou, etc.
+    });
+    res.json(conversas);
+  } catch (error) {
+    console.error("Erro ao buscar conversas ativas:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});
+
 // Rota para obter mensagens de uma conversa específica
-chatRouter.get('/chats/:conversaId/mensagens', async (req, res) => {
+chatRouter.get('/:conversaId/mensagens', async (req, res) => {
   const { conversaId } = req.params;
   try {
     const mensagens = await prisma.mensagemAtendimento.findMany({

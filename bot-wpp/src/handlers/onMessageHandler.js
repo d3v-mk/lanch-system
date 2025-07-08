@@ -1,76 +1,114 @@
-// onMessageHandler.js
-const path = require('path');
-const carregarComandos = require('@core/commandLoader');
-const middlewares = require('@middleware/loader');
-const { normalizeStringForSearch } = require('@utils/normalizeText');
-const handleConversationState = require('@handlers/conversationHandler');
-const mensagens = require('@utils/mensagens');
-const { estadosDeConversa } = require('@config/state'); // O Map compartilhado
+// bot-wpp/src/handlers/onMessageHandler.js
 
-const commandsDir = path.resolve(__dirname, '../commands');
-const commands = carregarComandos(commandsDir);
+const { estadosDeConversa } = require('@config/state');
+const conversationHandler = require('./conversationHandler');
+const mensagens = require('../utils/mensagens'); // Importe o módulo de mensagens
+const fs = require('fs');   // Módulo para leitura de arquivos
+const path = require('path'); // Módulo para lidar com caminhos de arquivos
 
-async function onMessage(msg, sock) {
-  const texto = (msg.body || '').trim();
-  const userId = msg.key.remoteJid;
+// --- Carregamento Dinâmico de Comandos ---
+const commands = {};
+const commandsDir = path.join(__dirname, '../commands'); // Caminho para a pasta commands
 
-  console.log(`[${userId}] Estado atual:`, estadosDeConversa.get(userId));
-  console.log('[onMessageHandler] estadosDeConversa keys:', Array.from(estadosDeConversa.keys()));
+// Lê todas as subpastas dentro de 'commands'
+fs.readdirSync(commandsDir).forEach(dir => {
+  const commandPath = path.join(commandsDir, dir, 'index.js');
+  // Verifica se o 'index.js' existe dentro da subpasta do comando
+  if (fs.existsSync(commandPath)) {
+    try {
+      const commandModule = require(commandPath);
+      // O nome da pasta (dir) será o nome do comando
+      commands[dir] = commandModule;
+      console.log(`[Comandos] Comando /${dir} carregado com sucesso.`);
+    } catch (loadError) {
+      console.error(`[Comandos] ERRO ao carregar o comando /${dir} de ${commandPath}:`, loadError.message);
+    }
+  }
+});
+// --- Fim do Carregamento Dinâmico ---
 
-  if (!texto) {
-    await sock.sendMessage(userId, { text: 'Não entendi sua mensagem, pode tentar de novo?' });
+
+async function onMessage(sock, msg) {
+  // Lógica para ignorar mensagens de status, suas próprias mensagens, etc.
+  if (msg.key.remoteJid === 'status@broadcast' || msg.key.fromMe) {
     return;
   }
 
-  const args = texto.split(' ').slice(1).map(normalizeStringForSearch);
+  const userId = msg.key.remoteJid;
+  // --- CORREÇÃO AQUI: Garante que 'body' capture o texto real da mensagem ---
+  const body = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
 
-  // 1) Primeiro tenta tratar fluxo (estado da conversa)
-  if (estadosDeConversa.has(userId)) {
-    // handleConversationState agora retorna true se o fluxo continua, ou false se terminou e o estado foi limpo.
-    const conversationContinues = await handleConversationState(msg, args, sock);
+  // Logs para depuração
+  console.log(`[${userId.split('@')[0]}] Mensagem recebida: "${body}"`); // Agora deve mostrar o comando
+  console.log(`[${userId.split('@')[0]}] Estado atual (antes):`, estadosDeConversa.get(userId) ? estadosDeConversa.get(userId).etapa : 'Nenhum');
+  console.log(`[onMessageHandler] estadosDeConversa keys:`, Array.from(estadosDeConversa.keys()));
 
-    // Se a conversa continua (conversationContinues é true), significa que a mensagem foi tratada pelo fluxo.
-    // Se a conversa NÃO continua (conversationContinues é false), significa que o fluxo terminou e o estado foi limpo.
-    // Em ambos os casos, a mensagem já foi "consumida" pelo fluxo de conversa.
-    if (conversationContinues === true || conversationContinues === false) {
-      return; // Sai do onMessage, pois a mensagem já foi tratada pelo fluxo de conversa
+
+  // --- 1. Tentar lidar com o fluxo de conversa (atendimento humano, pedidos, etc.) ---
+  console.log(`[${userId.split('@')[0]}] Tentando conversationHandler...`);
+  // O conversationHandler já espera 'msg' em vez de 'body' para extrair o texto internamente.
+  const conversationHandled = await conversationHandler(sock, msg, null);
+
+  if (conversationHandled) {
+    console.log(`[${userId.split('@')[0]}] Mensagem TRATADA por conversationHandler.`);
+    return; // Mensagem já tratada, não prossiga para comandos
+  }
+
+  console.log(`[${userId.split('@')[0]}] Mensagem NÃO tratada por conversationHandler. Verificando comandos...`);
+
+  // --- 2. Tentar lidar com comandos (se a mensagem não foi tratada por conversa) ---
+  if (body.startsWith('/')) { // Agora 'body' deve ter "/atendimento" ou "/pedir"
+    const [commandName, ...argsRaw] = body.slice(1).split(' '); // Separa comando e argumentos
+    const command = commands[commandName]; // Obtém o módulo do comando do mapa carregado dinamicamente
+
+    if (command && typeof command.handle === 'function') {
+      console.log(`[${userId.split('@')[0]}] Executando comando: /${commandName}`);
+      try {
+        // Chama a função 'handle' dentro do módulo do comando
+        await command.handle(sock, msg, argsRaw);
+        console.log(`[${userId.split('@')[0]}] Comando /${commandName} executado com SUCESSO.`);
+      } catch (commandError) {
+        console.error(`[${userId.split('@')[0]}] ERRO ao executar comando /${commandName}:`, commandError);
+        try {
+          await sock.sendMessage(userId, { text: mensagens.erros.erroInterno || "Ocorreu um erro ao processar seu comando." });
+        } catch (sendError) {
+          console.error(`[${userId.split('@')[0]}] ERRO CRÍTICO: Falha ao enviar mensagem de erro para o usuário:`, sendError);
+        }
+      }
+    } else {
+      console.log(`[${userId.split('@')[0]}] Comando desconhecido ou handler ausente: /${commandName}`);
+      try {
+        await sock.sendMessage(userId, { text: mensagens.erros.comandoDesconhecido });
+        console.log(`[${userId.split('@')[0]}] Mensagem de 'comando desconhecido' ENVIADA.`);
+      } catch (sendError) {
+        console.error(`[${userId.split('@')[0]}] ERRO CRÍTICO: Falha ao enviar 'comando desconhecido' para o usuário:`, sendError);
+      }
     }
-    // Se handleConversationState retornasse undefined ou algo inesperado, o fluxo continuaria abaixo.
-    // Mas com a lógica atual, ele sempre retornará true ou false.
+    return; // Comando processado ou erro de comando, não faça mais nada
   }
 
-  // 2) Depois roda middlewares
-  for (const middleware of middlewares) {
-    const resultado = await middleware(msg, sock);
-    if (resultado) return resultado;
-  }
+  console.log(`[${userId.split('@')[0]}] Mensagem não é um comando. Verificando fallback...`);
 
-  // 3) Processa comando
-  const [cmdRaw, ...argsRaw] = texto.split(' ');
-  const cmd = normalizeStringForSearch(cmdRaw);
-  const argsOriginais = argsRaw;
-  let comando = null;
-
-  for (let i = argsRaw.length; i >= 0; i--) {
-    const tentativa = [cmd, ...argsRaw.slice(0, i)].join(' ');
-    comando = commands[normalizeStringForSearch(tentativa)];
-    if (comando) {
-      argsRaw.splice(0, i);
-      break;
+  // --- 3. Lógica padrão/fallback (se não foi conversação nem comando) ---
+  const estadoAtual = estadosDeConversa.get(userId);
+  if (!estadoAtual) { // Se não há estado e não é comando, é uma nova interação
+    console.log(`[${userId.split('@')[0]}] Mensagem sem estado e sem comando. Enviando menu inicial.`);
+    try {
+      await sock.sendMessage(userId, { text: mensagens.gerais.menuInicial }); // Sua mensagem de boas-vindas
+      console.log(`[${userId.split('@')[0]}] Mensagem de 'menu inicial' ENVIADA.`);
+    } catch (sendError) {
+      console.error(`[${userId.split('@')[0]}] ERRO CRÍTICO: Falha ao enviar 'menu inicial' para o usuário:`, sendError);
     }
+  } else {
+    console.log(`[${userId.split('@')[0]}] Mensagem não tratada, mas com estado existente: ${estadoAtual.etapa}.`);
+    // Opcional: Avisar o usuário que a mensagem não foi entendida no contexto atual
+    // try {
+    //   await sock.sendMessage(userId, { text: mensagens.erros.naoEntendido || "Desculpe, não entendi. Por favor, digite /menu para ver as opções." });
+    //   console.log(`[${userId.split('@')[0]}] Mensagem de 'não entendido no estado' ENVIADA.`);
+    // } catch (sendError) {
+    //   console.error(`[${userId.split('@')[0]}] ERRO CRÍTICO: Falha ao enviar 'não entendido no estado' para o usuário:`, sendError);
+    // }
   }
-
-  if (comando) {
-    return comando(msg, argsRaw, sock, argsOriginais);
-  }
-
-  // 4) Se começou com '/' mas comando não existe
-  if (cmd.startsWith('/')) {
-    return msg.reply(mensagens.gerais.comandoDesconhecido);
-  }
-
-  // 5) Se mensagem normal, responde padrão
-  await sock.sendMessage(userId, { text: 'Oi! Digite /ajuda para ver os comandos disponíveis.' });
 }
 
-module.exports = onMessage;
+module.exports = { onMessage };

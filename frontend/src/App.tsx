@@ -5,6 +5,9 @@ import Dashboard from './pages/Dashboard'
 import Produtos from './pages/Produtos'
 import Login from './components/Login'
 import Pedidos from './pages/Pedidos'
+import AtendimentoPage from './pages/Atendimento';
+
+
 export default function App() {
   const [logado, setLogado] = useState(false)
   
@@ -21,6 +24,7 @@ export default function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/produtos" element={<Produtos />} />
             <Route path="/pedidos" element={<Pedidos />} />
+            <Route path="/atendimento" element={<AtendimentoPage />} />
           </Routes>
         </main>
       </div>
