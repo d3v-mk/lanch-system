@@ -1,0 +1,51 @@
+{
+  "name": "orderbot",
+  "version": "1.0.0",
+  "description": "Whatsapp bot para lanchonetes",
+  "main": "src/start.js",
+  "scripts": {
+    "start": "node src/start.js",
+    "seed": "node seed/utils/seed.js",
+    "prisma-tools": "node scripts/prisma-tools.js",
+    "local-bot": "node scripts/local-bot.js"
+  },
+  "keywords": [
+    "order",
+    "bot",
+    "whatsapp",
+    "prisma",
+    "postgres"
+  ],
+  "author": "devmk",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^6.10.1",
+    "@whiskeysockets/baileys": "^6.7.18",
+    "axios": "^1.10.0",
+    "canvas": "^3.1.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.0.0",
+    "express": "^5.1.0",
+    "module-alias": "^2.2.3",
+    "pino": "^9.7.0",
+    "prisma": "^6.10.1",
+    "qrcode-terminal": "^0.12.0",
+    "socket.io": "^4.8.1"
+  },
+  "prisma": {
+    "schema": "database/prisma/schema.prisma",
+    "seed": "node seed/utils/seed.js"
+  },
+  "_moduleAliases": {
+    "@lib": "lib",
+    "@utils": "src/utils",
+    "@commands": "src/commands",
+    "@core": "src/core",
+    "@bot": "src/bot",
+    "@routes": "src/routes",
+    "@handlers": "src/handlers",
+    "@config": "src/config",
+    "@services": "src/services",
+    "@middleware": "src/middleware"
+  }
+}

@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+
+
+
+model Cliente {
+  @@map("clientes")
+
+  id            String      @id @default(uuid())
+  nome          String
+  telefone      String
+  endereco      String?   
+  pedidos       Pedido[]
+  criadoEm      DateTime    @default(now())
+  
+}
+
+
+
+
+
+
+model Produto {
+  @@map("produtos")
+
+  id              String        @id @default(uuid())
+  nome            String
+  normalizedName  String?       @unique
+  preco           Decimal       @db.Decimal(10, 2)
+  disponivel      Boolean       @default(true)
+  descricao       String?
+  imagemUrl       String?
+  criadoEm        DateTime      @default(now())
+  itens           ItemPedido[]
+}
+
+
+
+
+
+
+model Pedido {
+  @@map("pedidos")
+
+  id              String          @id @default(uuid())
+  numeroPedido    Int             @unique @default(autoincrement())
+  clienteId       String
+  cliente         Cliente         @relation(fields: [clienteId], references: [id])
+  observacao      String?
+  criadoEm        DateTime        @default(now())
+  total           Decimal         @db.Decimal(10, 2)
+  status          StatusPedido    @default(PENDENTE)
+  itens           ItemPedido[]
+
+}
+
+
+
+
+
+model ItemPedido {
+  @@map("itens_pedido")
+
+  id         String   @id @default(uuid())
+  pedidoId   String
+  produtoId  String
+  quantidade Int
+  subtotal   Decimal  @db.Decimal(10, 2)
+
+  pedido     Pedido   @relation(fields: [pedidoId], references: [id])
+  produto    Produto  @relation(fields: [produtoId], references: [id])
+
+}
+
+
+
+
+
+model ConversaAtendimento {
+  id              String      @id @default(uuid())
+  clienteId       String      // ID do cliente (remoteJid do WhatsApp)
+  clienteNome     String?     // Nome do cliente, para exibição no painel
+  status          String      @default("PENDENTE") // "PENDENTE", "EM_ATENDIMENTO", "FINALIZADO"
+  atendenteId     String?     // Opcional: ID do usuário do painel que está atendendo (se tiver sistema de usuários)
+  mensagens       MensagemAtendimento[]
+  criadoEm        DateTime    @default(now())
+  atualizadoEm    DateTime    @updatedAt
+
+  @@map("conversas_atendimento")
+}
+
+
+
+
+
+model MensagemAtendimento {
+  id              String              @id @default(uuid())
+  conversaId      String
+  conversa        ConversaAtendimento @relation(fields: [conversaId], references: [id])
+  remetente       String              // "CLIENTE" ou "ATENDENTE"
+  conteudo        String
+  timestamp       DateTime            @default(now())
+
+  @@map("mensagens_atendimento")
+}
+
+
+
+
+
+enum StatusPedido {
+  @@map("status_pedido")
+
+  PENDENTE
+  EM_PREPARO
+  PRONTO
+  ENTREGUE
+  CANCELADO
+
+}

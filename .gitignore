@@ -1,0 +1,32 @@
+# Arquivos de sistema operacional
+.DS_Store
+Thumbs.db
+.ipynb_checkpoints/ # Se usar Jupyter/VS Code notebooks
+
+# Diretórios de módulos de dependências
+node_modules/ # Ignora qualquer node_modules na raiz ou subdiretórios que não tenham seu próprio .gitignore
+
+# Pastas de build/compilação do frontend
+frontend/dist/
+
+# Pastas específicas de cache/logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.eslintcache
+
+# Variáveis de ambiente (crucial!)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Informações de sessão do Baileys no bot-wpp
+bot-wpp/auth/
+
+# Arquivos de migração do Prisma (gerados, mas o schema.prisma é essencial)
+# É comum querer manter as migrações no Git para histórico e colaboração.
+# Se você *realmente* não quiser, adicione:
+# backend/prisma/migrations/
