@@ -135,4 +135,75 @@ router.put('/:id', async (req, res) => {
   }
 })
 
+// ✅ PATCH /pedidos/:id/status - Atualizar status de um pedido
+router.patch('/:id/status', async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body; // O novo status (ex: "EM_PREPARO", "SAIU_ENTREGA")
+
+  // Validação básica do status (opcional, mas recomendado)
+  const validStatuses = ['PENDENTE', 'EM_PREPARO', 'PRONTO', 'SAIU_ENTREGA', 'ENTREGUE', 'CANCELADO'];
+  if (!status || !validStatuses.includes(status)) {
+    return res.status(400).json({ error: 'Status inválido fornecido.' });
+  }
+
+  try {
+    const pedidoAtualizado = await prisma.pedido.update({
+      where: { id },
+      data: { status },
+      // Inclua o cliente para poder pegar o cliente.telefone para o Socket.IO
+      include: {
+        cliente: true 
+      }
+    });
+
+    if (!pedidoAtualizado) {
+      return res.status(404).json({ error: 'Pedido não encontrado.' });
+    }
+
+    // Emitir evento Socket.IO para o bot sobre a atualização do status do pedido
+    // Usamos pedidoAtualizado.cliente.telefone como ID do cliente para o bot
+    io.emit('bot:order_status_update', {
+      pedidoId: pedidoAtualizado.id,
+      clienteId: pedidoAtualizado.cliente.telefone, // <-- Usando o telefone do cliente como ID
+      newStatus: pedidoAtualizado.status,
+    });
+
+    console.log(`[Backend] Status do pedido ${id} atualizado para ${status}. Notificando bot.`);
+    res.json(pedidoAtualizado);
+
+  } catch (error) {
+    console.error('Erro ao atualizar status do pedido:', error);
+    res.status(500).json({ error: 'Não foi possível atualizar o status do pedido.' });
+  }
+});
+
+// ✅ GET /pedidos/cliente/:clienteId/latest-status - Bot consulta o status do último pedido de um cliente
+router.get('/cliente/:clienteId/latest-status', async (req, res) => {
+  const { clienteId } = req.params; // clienteId aqui será o telefone do cliente
+
+  try {
+    const latestPedido = await prisma.pedido.findFirst({
+      where: { cliente: { telefone: clienteId } }, // Busca pelo telefone do cliente
+      orderBy: { criadoEm: 'desc' }, // Pega o pedido mais recente
+      select: {
+        id: true,
+        status: true,
+        criadoEm: true,
+        numeroPedido: true, // Inclui o número do pedido, pode ser útil
+      }
+    });
+
+    if (!latestPedido) {
+      return res.status(404).json({ message: 'Nenhum pedido encontrado para este cliente.' });
+    }
+
+    res.json(latestPedido);
+  } catch (error) {
+    console.error('Erro ao buscar último status do pedido para cliente:', error);
+    res.status(500).json({ error: 'Não foi possível buscar o status do pedido.' });
+  }
+});
+
+
 export default router
+
