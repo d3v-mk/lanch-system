@@ -1,4 +1,18 @@
+# # 09/07/25 12:12 feat(pedidos): Implementa funcionalidade de status e refatora gestão de pedidos
 
+Esta atualização introduz uma robusta funcionalidade de gerenciamento de status de pedidos, aprimorando a comunicação entre o bot, o painel de administração e os clientes.
+
+* **Gerenciamento de Status de Pedidos (Backend):**
+    * Utiliza o `enum` para definir os diferentes estágios (Pendente, Em Preparo, Pronto, Saiu para Entrega, Entregue, Cancelado).
+    * Implementadas novas rotas de API para permitir a atualização do status de um pedido e a consulta do último status de um cliente.
+    * Configurada a emissão de eventos via Socket.IO para notificar o bot em tempo real sobre mudanças de status.
+
+* **Comando `/status` e Notificações (Bot-WPP):**
+    * Introduzido o comando `/status` para que os clientes possam verificar facilmente o estágio atual de seus pedidos diretamente pelo WhatsApp.
+    * O bot agora recebe e processa atualizações de status do backend em tempo real, enviando mensagens informativas aos clientes à medida que seus pedidos progridem.
+
+* **Painel de Pedidos Aprimorado (Frontend):**
+    * Adicionado um botão de "Atualizar Status" em cada card, permitindo que os atendentes avancem o pedido para o próximo estágio diretamente do painel.
 
 ---
 
