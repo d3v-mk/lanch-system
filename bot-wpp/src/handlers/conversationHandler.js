@@ -1,8 +1,8 @@
 // @handlers/conversationHandler.js (CORRIGIDO PARA MENSAGEM VAZIA NO PAINEL)
 
 const { estadosDeConversa } = require('@config/state');
-const { io } = require('../bot/socket');
-const mensagens = require('../utils/mensagens');
+const { io } = require('@bot/socket');
+const mensagens = require('@utils/mensagens');
 
 async function handleConversationState(sock, msg, args) {
   const userId = msg.key.remoteJid;
