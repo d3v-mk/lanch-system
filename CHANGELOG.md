@@ -1,3 +1,27 @@
+# 09/07/25 09:00 refactor(backend): Modulariza handlers de eventos do Socket.IO
+
+Reestrutura a lógica do Socket.IO do backend em módulos dedicados para melhor organização, legibilidade e manutenção.
+
+- Extrai os listeners de eventos relacionados a chats (bot:chat_message, admin:send_message, admin:end_chat) para `socket/chatHandlers.ts`.
+- Move os listeners de eventos administrativos e de gerenciamento de salas (admin:join_chat_room, admin:leave_chat_room) para `socket/adminHandlers.ts`.
+- Cria `socket/index.ts` como um orquestrador central para toda a configuração de eventos do Socket.IO.
+- Atualiza `backend/src/index.ts` para utilizar a nova estrutura modular, simplificando o arquivo principal do servidor.
+- Realoca `whatsappService.ts` para `services/` para um melhor agrupamento lógico das funcionalidades de serviço.
+- Atualiza `CHANGELOG.md` para refletir as melhorias e correções recentes.
+
+---
+
+# 09/07/25 09:00 feat(bot-wpp): Evita o processamento de mensagens recebidas offline/durante a conexão
+
+**Melhorias e Correções de Conexão/Mensagens**
+
+* **Tratamento Aprimorado de Mensagens na Inicialização:** Implementamos uma lógica robusta para prevenir que o bot processe mensagens recebidas enquanto estava offline ou durante o processo de conexão.
+    * As mensagens agora são **filtradas e ignoradas** até que o bot esteja completamente online e seu status seja `conectado`.
+    * Introduzimos um **controle preciso baseado no timestamp** da mensagem versus o momento em que o bot ficou online, evitando respostas a interações antigas.
+* **Controle de Estado Unificado:** O fluxo de prontidão do bot agora é gerenciado de forma mais consistente, usando o `botStatus` para determinar quando as mensagens podem ser processadas.
+
+---
+
 # 08/07/25 23:00 refactor(bot-wpp): Modulariza o tratamento de mensagens e comandos
 
 Refatora o módulo onMessageHandler para melhor organização e separação de responsabilidades.
