@@ -1,4 +1,18 @@
-# 08/07/25 - feat: Implementa fluxo completo de atendimento e pedido via WhatsApp
+# 08/07/25 23:00 refactor(bot-wpp): Modulariza o tratamento de mensagens e comandos
+
+Refatora o módulo onMessageHandler para melhor organização e separação de responsabilidades.
+
+- Move a lógica de carregamento de comandos para `core/commandLoader.js`.
+- Cria `core/messageSender.js` para centralizar o envio de mensagens.
+- Adiciona `utils/messageUtils.js` para utilitários de mensagem.
+- Implementa `handlers/commandHandler.js` para processamento de comandos.
+- Adiciona `handlers/fallbackHandler.js` para tratamento de mensagens não reconhecidas.
+- Remove arquivos de mensagens duplicados e o middleware de loader.
+- Adiciona restrição de número em modo dev via `NODE_ENV` e `ALLOWED_DEV_NUMBER`.
+
+---
+
+# 08/07/25 18:30 - feat: Implementa fluxo completo de atendimento e pedido via WhatsApp
 
 Introduz a funcionalidade completa de atendimento ao cliente via chat e o fluxo de pedido de lanches, integrando o bot WhatsApp (Baileys) com o backend e o painel de atendimento.
 
