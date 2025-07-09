@@ -4,9 +4,11 @@ const P = require('pino');
 const fs = require('fs');
 const path = require('path');
 const { getAuthState } = require('./auth');
-const { setupSockEvents } = require('./handlers');
+// Importa setupSockEvents e, se você tiver uma nova função em handlers, adicione-a aqui
+const { setupSockEvents } = require('./handlers'); 
+const { setBotOnlineTimestamp } = require('@handlers/onMessageHandler'); // <--- Importe aqui!
 
-let sock = null; // A instância do sock do Baileys
+let sock = null;
 let botStatus = 'offline';
 let lastQr = null;
 
@@ -27,32 +29,40 @@ async function startSock(io) {
       console.log('🔄 Reenviando QR code em cache...');
       io.emit('bot_qrcode', lastQr);
     }
-    // IMPORTANTE: Se o sock já existe, retorne-o para quem chamou.
     return sock;
   }
 
   console.log('🚀 Iniciando conexão com o WhatsApp...');
   setBotStatus('iniciando');
   setLastQr(null);
-  io.emit('bot_status', botStatus); // Emite status para o painel
+  io.emit('bot_status', botStatus);
 
   const { state, saveCreds } = await getAuthState();
 
   sock = makeWASocket({
-    logger: P({ level: 'silent' }), // Para evitar logs muito verbosos do Baileys
+    logger: P({ level: 'silent' }),
     auth: state,
-    // Adicione outras configurações do Baileys aqui, se tiver (ex: browser, version)
   });
 
   // Configura os listeners de eventos do sock (conexão, mensagens, etc.)
-  setupSockEvents(sock, io, saveCreds, setBotStatus, getBotStatus, setLastQr, getLastQr, () => {
-    // Callback para quando a conexão termina, tenta reconectar
-    sock = null; // Libera a variável para uma nova conexão
-    console.log('🔌 Conexão do Baileys encerrada, tentando reconectar em 1 segundo...');
-    setTimeout(() => startSock(io), 1000); // Tenta iniciar novamente
-  });
+  // Passa setBotOnlineTimestamp como um novo argumento para setupSockEvents
+  setupSockEvents(
+    sock, 
+    io, 
+    saveCreds, 
+    setBotStatus, 
+    getBotStatus, 
+    setLastQr, 
+    getLastQr, 
+    setBotOnlineTimestamp, // <--- NOVO: Passe a função aqui
+    () => {
+      // Callback para quando a conexão termina, tenta reconectar
+      sock = null;
+      console.log('🔌 Conexão do Baileys encerrada, tentando reconectar em 1 segundo...');
+      setTimeout(() => startSock(io), 1000);
+    }
+  );
 
-  // Retorne a instância do sock para quem chamou a função
   return sock;
 }
 

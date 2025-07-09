@@ -8,17 +8,25 @@ const { getMessageBody, getUserId, logMessageInfo } = require('@utils/messageUti
 const { handleCommand } = require('@handlers/commandHandler');
 const { handleFallback } = require('@handlers/fallbackHandler');
 
-// Carregamento dos comandos uma única vez ao iniciar o módulo
 const commandsDir = path.join(__dirname, '../commands');
 const commands = loadCommands(commandsDir);
 
-// --- Parte para o modo de desenvolvimento ---
 const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
 const ALLOWED_DEV_NUMBER = process.env.ALLOWED_DEV_NUMBER;
 
+// --- Única variável para o timestamp de online ---
+let botOnlineTimestamp = null;
+
+/**
+ * Define o timestamp de quando o bot ficou online.
+ * Esta função deve ser chamada APÓS o bot se conectar com sucesso.
+ */
+function setBotOnlineTimestamp() {
+  botOnlineTimestamp = Date.now(); // Armazena o timestamp atual em milissegundos
+  console.log(`[INIT] Bot online em: ${new Date(botOnlineTimestamp).toLocaleString()}`);
+}
 
 async function onMessage(sock, msg) {
-  // Lógica para ignorar mensagens de status, suas próprias mensagens, etc.
   if (msg.key.remoteJid === 'status@broadcast' || msg.key.fromMe) {
     return;
   }
@@ -26,39 +34,45 @@ async function onMessage(sock, msg) {
   const userId = getUserId(msg);
   const body = getMessageBody(msg);
 
-  // --- Adicione esta verificação aqui ---
   if (IS_DEVELOPMENT && userId !== ALLOWED_DEV_NUMBER) {
     console.log(`[DEV_MODE] Mensagem ignorada de ${userId.split('@')[0]}. Somente ${ALLOWED_DEV_NUMBER.split('@')[0]} é permitido em dev.`);
-    return; // Ignora a mensagem se não for o número permitido em modo dev
+    return;
+  }
+
+  // --- Lógica para ignorar mensagens antigas (recebidas offline) ---
+  // Esta verificação se baseia APENAS no timestamp da mensagem e do bot.
+  // Ela será eficaz porque `onMessage` só será chamada quando o bot estiver "conectado".
+  const messageTimestampInMs = msg.messageTimestamp ? msg.messageTimestamp * 1000 : null;
+
+  if (botOnlineTimestamp && messageTimestampInMs && messageTimestampInMs < botOnlineTimestamp) {
+    console.log(`[DEBUG] Mensagem de ${userId.split('@')[0]} ignorada. Enviada ${new Date(messageTimestampInMs).toLocaleString()} (antes do bot ficar online ${new Date(botOnlineTimestamp).toLocaleString()}).`);
+    return; // Ignora a mensagem
   }
   // --- Fim da verificação ---
 
-  // Logs para depuração
+
   logMessageInfo(userId, body, estadosDeConversa.get(userId));
   console.log(`[onMessageHandler] estadosDeConversa keys:`, Array.from(estadosDeConversa.keys()));
 
-  // --- 1. Tentar lidar com o fluxo de conversa ---
   console.log(`[${userId.split('@')[0]}] Tentando conversationHandler...`);
   const conversationHandled = await conversationHandler(sock, msg, null);
 
   if (conversationHandled) {
     console.log(`[${userId.split('@')[0]}] Mensagem TRATADA por conversationHandler.`);
-    return; // Mensagem já tratada, não prossiga
+    return;
   }
 
   console.log(`[${userId.split('@')[0]}] Mensagem NÃO tratada por conversationHandler. Verificando comandos...`);
 
-  // --- 2. Tentar lidar com comandos ---
   const commandHandled = await handleCommand(sock, msg, commands, userId, body);
   if (commandHandled) {
-    return; // Comando processado ou erro de comando
+    return;
   }
 
   console.log(`[${userId.split('@')[0]}] Mensagem não é um comando. Verificando fallback...`);
 
-  // --- 3. Lógica padrão/fallback ---
   const estadoAtual = estadosDeConversa.get(userId);
   await handleFallback(sock, userId, estadoAtual);
 }
 
-module.exports = { onMessage };
+module.exports = { onMessage, setBotOnlineTimestamp }; // <--- NÃO EXPORTA MAIS `isBotFullyOnline`
