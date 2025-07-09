@@ -1,4 +1,17 @@
-# 09/07/25 09:00 refactor(backend): Modulariza handlers de eventos do Socket.IO
+
+
+---
+
+# 09/07/25 10:00 refactor(frontend): Modulariza Atendimento com custom hook
+
+Refatora o componente AtendimentoPage para melhorar a organização e a separação de responsabilidades.
+
+- Cria `useChatManagement.ts` para encapsular toda a lógica de estado, carregamento de dados e manipulação de eventos do Socket.IO.
+- Simplifica `AtendimentoPage/index.tsx` para focar apenas na renderização da UI, consumindo os dados e handlers do novo hook.
+
+---
+
+# 09/07/25 09:30 refactor(backend): Modulariza handlers de eventos do Socket.IO
 
 Reestrutura a lógica do Socket.IO do backend em módulos dedicados para melhor organização, legibilidade e manutenção.
 
