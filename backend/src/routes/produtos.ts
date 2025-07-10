@@ -1,35 +1,43 @@
-// src/routes/produtos.ts
+// backend/src/routes/produtos.ts
 
 import { Router } from 'express'
+import { getProdutos } from '../services/produtoService';
 import prisma from '../prismaClient'
-import { normalizeStringForSearch } from '../utils/stringUtils' // Importe a função
+import { normalizeStringForSearch } from '../utils/stringUtils'
 
 const router = Router()
 
 // cria o produto
 router.post('/', async (req, res) => {
-  const { nome, preco, descricao, imagemUrl, disponivel = true } = req.body
+  // CORREÇÃO AQUI: Adicione 'categoriaId' aos campos desestruturados do corpo da requisição
+  const { nome, preco, descricao, imagemUrl, disponivel = true, categoriaId } = req.body
 
-  if (!nome || preco === undefined) {
-    return res.status(400).json({ erro: 'Nome e preço são obrigatórios' })
+  // Validação para categoriaId também
+  if (!nome || preco === undefined || !categoriaId) {
+    return res.status(400).json({ erro: 'Nome, preço e categoria são obrigatórios.' })
   }
 
   try {
     const produto = await prisma.produto.create({
       data: {
         nome,
-        normalizedName: normalizeStringForSearch(nome), 
+        normalizedName: normalizeStringForSearch(nome),
         preco: preco.toString(),
         descricao,
         imagemUrl,
         disponivel,
+        categoriaId, // <--- GARANTA QUE categoriaId ESTÁ SENDO PASSADO AQUI
       },
     })
 
     res.status(201).json(produto)
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ erro: 'Erro ao cadastrar produto' })
+  } catch (err: any) { // Type as 'any' to access error.code
+    console.error('Erro ao cadastrar produto:', err);
+    if (err.code === 'P2002') { // Erro de violação de unicidade (ex: normalizedName)
+      return res.status(400).json({ erro: 'Já existe um produto com este nome.' });
+    }
+    // Adicione tratamento para P2025 (registro não encontrado, se aplicável) ou outros erros
+    res.status(500).json({ erro: 'Erro ao cadastrar produto.' });
   }
 })
 
@@ -49,27 +57,15 @@ router.delete('/:id', async (req, res) => {
   }
 })
 
-// Listar produtos (com filtro opcional por nome)
+// Listar produtos (com filtro opcional por nome e agora usando o serviço)
 router.get('/', async (req, res) => {
-  const { nome } = req.query
+  const { nome, cardapio } = req.query
 
   try {
-    let produtos
-
-    if (nome) {
-      const normalizedSearchTerm = normalizeStringForSearch(String(nome)); // <-- Use a mesma normalização aqui
-
-      produtos = await prisma.produto.findMany({
-        where: {
-          normalizedName: { // <-- BUSCA PELA NOVA COLUNA NORMALIZADA
-            contains: normalizedSearchTerm,
-            mode: 'insensitive',
-          },
-        },
-      })
-    } else {
-      produtos = await prisma.produto.findMany()
-    }
+    const produtos = await getProdutos({
+      nome: typeof nome === 'string' ? nome : undefined,
+      paraCardapio: cardapio === 'true',
+    });
 
     return res.json(produtos)
   } catch (err) {

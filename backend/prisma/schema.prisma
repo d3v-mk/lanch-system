@@ -7,114 +7,99 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
-
-
-
 model Cliente {
   @@map("clientes")
 
-  id            String      @id @default(uuid())
+  id            String    @id @default(uuid())
   nome          String
-  telefone      String      @unique
-  endereco      String?   
+  telefone      String    @unique
+  endereco      String?
   pedidos       Pedido[]
-  criadoEm      DateTime    @default(now())
-  
+  criadoEm      DateTime  @default(now())
 }
 
+// Novo Modelo Categoria
+model Categoria {
+  @@map("categorias") // Mapeia para a tabela 'categorias' no banco de dados
 
-
-
-
+  id        String    @id @default(uuid())
+  nome      String    @unique // Nome da categoria (ex: "Sanduíches", "Bebidas")
+  produtos  Produto[] // Relação com o modelo Produto (uma categoria pode ter muitos produtos)
+  criadoEm  DateTime  @default(now())
+}
 
 model Produto {
   @@map("produtos")
 
-  id              String        @id @default(uuid())
-  nome            String
-  normalizedName  String?       @unique
-  preco           Decimal       @db.Decimal(10, 2)
-  disponivel      Boolean       @default(true)
-  descricao       String?
-  imagemUrl       String?
-  criadoEm        DateTime      @default(now())
-  itens           ItemPedido[]
+  id            String    @id @default(uuid())
+  nome          String
+  normalizedName String?   @unique
+  preco         Decimal   @db.Decimal(10, 2)
+  disponivel    Boolean   @default(true)
+  descricao     String?
+  imagemUrl     String?
+  criadoEm      DateTime  @default(now())
+  itens         ItemPedido[]
+
+  // Adiciona o campo para a chave estrangeira da Categoria
+  categoriaId   String   // Opcional por enquanto, caso você tenha produtos sem categoria ou queira adicionar categorias gradualmente
+  // Define a relação com o modelo Categoria
+  categoria     Categoria? @relation(fields: [categoriaId], references: [id])
+
+  // Adiciona um índice para a categoriaId para melhor performance em queries
+  @@index([categoriaId])
 }
-
-
-
-
-
 
 model Pedido {
   @@map("pedidos")
 
-  id              String          @id @default(uuid())
-  numeroPedido    Int             @unique @default(autoincrement())
-  clienteId       String
-  cliente         Cliente         @relation(fields: [clienteId], references: [id])
-  observacao      String?
-  criadoEm        DateTime        @default(now())
-  total           Decimal         @db.Decimal(10, 2)
-  status          StatusPedido    @default(PENDENTE)
-  itens           ItemPedido[]
-
+  id            String        @id @default(uuid())
+  numeroPedido  Int           @unique @default(autoincrement())
+  clienteId     String
+  cliente       Cliente       @relation(fields: [clienteId], references: [id])
+  observacao    String?
+  criadoEm      DateTime      @default(now())
+  total         Decimal       @db.Decimal(10, 2)
+  status        StatusPedido  @default(PENDENTE)
+  itens         ItemPedido[]
 }
-
-
-
-
 
 model ItemPedido {
   @@map("itens_pedido")
 
-  id         String   @id @default(uuid())
-  pedidoId   String
-  produtoId  String
-  quantidade Int
-  subtotal   Decimal  @db.Decimal(10, 2)
+  id          String   @id @default(uuid())
+  pedidoId    String
+  produtoId   String
+  quantidade  Int
+  subtotal    Decimal  @db.Decimal(10, 2)
 
-  pedido     Pedido   @relation(fields: [pedidoId], references: [id])
-  produto    Produto  @relation(fields: [produtoId], references: [id])
-
+  pedido      Pedido   @relation(fields: [pedidoId], references: [id])
+  produto     Produto  @relation(fields: [produtoId], references: [id])
 }
 
-
-
-
-
 model ConversaAtendimento {
-  id              String      @id @default(uuid())
-  clienteId       String      // ID do cliente (remoteJid do WhatsApp)
-  clienteNome     String?     // Nome do cliente, para exibição no painel
-  status          String      @default("PENDENTE") // "PENDENTE", "EM_ATENDIMENTO", "FINALIZADO"
-  atendenteId     String?     // Opcional: ID do usuário do painel que está atendendo (se tiver sistema de usuários)
-  mensagens       MensagemAtendimento[]
-  criadoEm        DateTime    @default(now())
-  atualizadoEm    DateTime    @updatedAt
+  id            String              @id @default(uuid())
+  clienteId     String              // ID do cliente (remoteJid do WhatsApp)
+  clienteNome   String?             // Nome do cliente, para exibição no painel
+  status        String              @default("PENDENTE") // "PENDENTE", "EM_ATENDIMENTO", "FINALIZADO"
+  atendenteId   String?             // Opcional: ID do usuário do painel que está atendendo (se tiver sistema de usuários)
+  mensagens     MensagemAtendimento[]
+  criadoEm      DateTime            @default(now())
+  atualizadoEm  DateTime            @updatedAt
 
   @@map("conversas_atendimento")
 }
 
-
-
-
-
 model MensagemAtendimento {
-  id              String              @id @default(uuid())
-  conversaId      String
-  conversa        ConversaAtendimento @relation(fields: [conversaId], references: [id])
-  remetente       String              // "CLIENTE" ou "ATENDENTE"
-  conteudo        String
-  timestamp       DateTime            @default(now())
+  id            String              @id @default(uuid())
+  conversaId    String
+  conversa      ConversaAtendimento @relation(fields: [conversaId], references: [id])
+  remetente     String              // "CLIENTE" ou "ATENDENTE"
+  conteudo      String
+  timestamp     DateTime            @default(now())
 
   @@map("mensagens_atendimento")
 }
-
-
-
-
 
 enum StatusPedido {
   @@map("status_pedido")
@@ -125,5 +110,4 @@ enum StatusPedido {
   SAIU_ENTREGA
   ENTREGUE
   CANCELADO
-
 }

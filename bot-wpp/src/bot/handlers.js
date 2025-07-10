@@ -1,9 +1,12 @@
 // bot-wpp/src/bot/handlers.js
+const dotenv = require('dotenv');
+dotenv.config();
 
 const { DisconnectReason } = require('@whiskeysockets/baileys');
 // Importa APENAS onMessage (não mais isBotFullyOnline)
 const { onMessage } = require('../handlers/onMessageHandler'); 
 const { deleteAuthFolder } = require('./auth');
+
 
 function setupSockEvents(
   sock,

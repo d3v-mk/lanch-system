@@ -1,5 +1,38 @@
 // bot-wpp/src/utils/mensagens.js
 
+/**
+ * Envia uma mensagem de texto para um JID (ID do WhatsApp) específico.
+ * @param {object} client O cliente Baileys (sock).
+ * @param {string} jid O JID do destinatário (ex: '5511999998888@s.whatsapp.net').
+ * @param {string} message O conteúdo da mensagem a ser enviada.
+ */
+async function sendWhatsAppMessage(client, jid, message) {
+  try {
+    await client.sendMessage(jid, { text: message });
+    console.log(`[Mensagens] Mensagem de texto enviada para ${jid}: "${message}"`);
+  } catch (error) {
+    console.error(`[Mensagens] Erro ao enviar mensagem de texto para ${jid}:`, error);
+  }
+}
+
+/**
+ * Envia uma imagem para um JID específico no WhatsApp.
+ * @param {object} client O cliente Baileys (sock).
+ * @param {string} jid O JID do destinatário.
+ * @param {Buffer} buffer A imagem como um Buffer.
+ * @param {string} [caption=''] A legenda da imagem (opcional).
+ */
+async function sendWhatsAppImage(client, jid, buffer, caption = '') {
+  try {
+    await client.sendMessage(jid, { image: buffer, caption: caption });
+    console.log(`[Mensagens] Imagem enviada com sucesso para ${jid}.`);
+  } catch (error) {
+    console.error(`[Mensagens] Erro ao enviar imagem para ${jid}:`, error);
+    // Lança o erro para que o chamador (o comando /cardapio) possa tratá-lo
+    throw new Error('Falha ao enviar imagem pelo bot.');
+  }
+}
+
 // --- Mensagens de status de pedido ---
 const statusPedidoNaoEncontrado = "Você não tem nenhum pedido ativo no momento.";
 const statusPedido_PENDENTE = "Seu pedido foi *RECEBIDO* e está aguardando confirmação.";
@@ -11,7 +44,14 @@ const statusPedido_CANCELADO = "Seu pedido foi *CANCELADO*.";
 
 // --- Mensagens gerais ---
 const gerais = {
-  menuInicial: "Olá! Seja bem-vindo(a) ao nosso serviço. Digite /pedir para fazer um pedido ou /atendimento para falar com um atendente.",
+  menuInicial: `Olá! Seja bem-vindo(a) ao nosso serviço de pedidos e atendimento. 😊
+
+  Para começar, escolha uma das opções abaixo:
+
+  🍕 *Digite:* \`/pedir\` - Para fazer um pedido
+  🗣️ *Digite:* \`/atendimento\` - Para falar com um atendente
+
+  Estamos aqui para ajudar!`,
   aguardeAtendimentoHumano: "Entendi! Encaminhei sua solicitação para um de nossos atendentes. Por favor, aguarde, em breve alguém irá te ajudar.",
   saudacaoPedido: "Opa! O que você gostaria de pedir?",
   voltarMenuPrincipal: "Para voltar ao menu principal, digite /menu."
@@ -119,4 +159,7 @@ module.exports = {
   statusPedido_SAIU_ENTREGA,
   statusPedido_ENTREGUE,
   statusPedido_CANCELADO,
+
+  sendWhatsAppMessage,
+  sendWhatsAppImage, // Exporte a nova função
 };
