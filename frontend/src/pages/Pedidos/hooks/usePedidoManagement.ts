@@ -45,7 +45,7 @@ export const usePedidoManagement = () => {
         return;
     }
 
-    if (window.confirm(`Mudar status do pedido ${pedidoId.substring(0, 8)}... de "${currentStatus}" para "${nextStatus}"?`)) {
+    if (window.confirm(`Mudar status do pedido de "${currentStatus}" para "${nextStatus}"?`)) {
       try {
         await updateOrderStatus(pedidoId, nextStatus);
         alert(`Status do pedido ${pedidoId.substring(0, 8)}... atualizado para ${nextStatus}!`);
