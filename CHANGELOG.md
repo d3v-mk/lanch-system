@@ -1,3 +1,23 @@
+# 10/07/25 17:30 feat(cardapio):  sistema de cardápio dinâmico com imagem
+
+Adiciona a funcionalidade de "Cardápio Inteligente", que permite a criação e gerenciamento de categorias de produtos e gera uma imagem de cardápio dinamicamente.
+
+**Backend:**
+- Adiciona rotas e serviços para CRUD de Categorias.
+- Cria o `imageGeneratorService` para gerar a imagem do cardápio.
+- Adiciona o campo `paraCardapio` e relaciona Categoria ao Produto no schema.
+- Cria uma rota específica (`/cardapio/cardapio-image`) para servir a imagem gerada.
+
+**Frontend:**
+- Adiciona componentes para visualizar o preview do cardápio gerado.
+- Inclui CRUD de Categorias na página de Produtos.
+- Ajusta o formulário de produtos para incluir a seleção de categoria.
+
+**Bot-WPP:**
+- Adiciona o comando `/cardapio` para enviar a imagem do cardápio gerado.
+
+---
+
 # 09/07/25 12:12 feat(pedidos): Implementa funcionalidade de status e refatora gestão de pedidos
 
 Esta atualização introduz uma robusta funcionalidade de gerenciamento de status de pedidos, aprimorando a comunicação entre o bot, o painel de administração e os clientes.
