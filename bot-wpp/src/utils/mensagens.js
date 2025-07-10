@@ -1,6 +1,6 @@
 // bot-wpp/src/utils/mensagens.js
 
-// --- Mensagens de status de pedido (NOVAS CONSTANTES SEPARADAS) ---
+// --- Mensagens de status de pedido ---
 const statusPedidoNaoEncontrado = "Você não tem nenhum pedido ativo no momento.";
 const statusPedido_PENDENTE = "Seu pedido foi *RECEBIDO* e está aguardando confirmação.";
 const statusPedido_EM_PREPARO = "Seu pedido está *EM PREPARO*! Em breve estará pronto para a entrega.";
@@ -9,14 +9,15 @@ const statusPedido_SAIU_ENTREGA = "Ótimas notícias! Seu pedido *SAIU PARA ENTR
 const statusPedido_ENTREGUE = "Seu pedido foi *ENTREGUE* com sucesso! Esperamos que tenha gostado!";
 const statusPedido_CANCELADO = "Seu pedido foi *CANCELADO*.";
 
-// --- Mensagens gerais (NOVAS CONSTANTES SEPARADAS) ---
+// --- Mensagens gerais ---
 const gerais = {
   menuInicial: "Olá! Seja bem-vindo(a) ao nosso serviço. Digite /pedir para fazer um pedido ou /atendimento para falar com um atendente.",
   aguardeAtendimentoHumano: "Entendi! Encaminhei sua solicitação para um de nossos atendentes. Por favor, aguarde, em breve alguém irá te ajudar.",
   saudacaoPedido: "Opa! O que você gostaria de pedir?",
+  voltarMenuPrincipal: "Para voltar ao menu principal, digite /menu."
 };
 
-// --- Mensagens de erro (NOVAS CONSTANTES SEPARADAS) ---
+// --- Mensagens de erro ---
 const erros = {
   comandoDesconhecido: "Desculpe, não entendi esse comando. Por favor, digite /pedir para iniciar um pedido ou /atendimento para falar com um atendente.",
   erroInterno: "Desculpe, ocorreu um erro interno. Por favor, tente novamente mais tarde.",
@@ -24,14 +25,17 @@ const erros = {
   naoEntendido: "Desculpe, não entendi. Por favor, digite /menu para ver as opções.",
   erroGenerico: "Desculpe, ocorreu um erro inesperado. Por favor, tente novamente mais tarde.",
   erroComunicacaoBackend: "Desculpe, não consegui verificar o status do seu pedido no momento. Tente novamente em alguns instantes.",
+  dadosClienteAusentes: "Ocorreu um erro e não consegui encontrar seus dados de entrega. Por favor, tente novamente digitando /pedir.",
 };
 
-// --- Mensagens administrativas (NOVAS CONSTANTES SEPARADAS) ---
+// --- Mensagens administrativas ---
 const admin = {
   chatFinalizado: "O atendimento foi finalizado pelo atendente.",
+  chatIniciado: "Um atendente se conectou. Você está agora em atendimento humano.",
+  semAtendentes: "Desculpe, no momento não temos atendentes disponíveis. Por favor, tente novamente mais tarde."
 };
 
-// --- Mensagens para o fluxo de cadastro de cliente (NOVAS CONSTANTES SEPARADAS) ---
+// --- Mensagens para o fluxo de cadastro de cliente ---
 const cadastro = {
   perguntarNome: "Olá! Para prosseguirmos com seu pedido, qual é o seu nome completo?",
   nomeInvalido: "Nome inválido. Por favor, digite seu nome completo.",
@@ -41,12 +45,24 @@ const cadastro = {
   clienteExistente: "Olá novamente! Qual item você gostaria de pedir?",
 };
 
-// --- Mensagens para o fluxo de pedido (NOVAS CONSTANTES SEPARADAS) ---
+// --- Mensagens para o fluxo de pedido ---
 const pedido = {
   perguntarItem: "Opa! Qual item você gostaria de pedir? (Ex: X-Tudo, Refrigerante)",
   itemNaoEncontrado: "Desculpe, não encontrei esse item. Por favor, digite o nome de um item da lista.",
   itemAdicionado: "ITEM_NOME_PLACEHOLDER adicionado ao seu pedido! Algo mais? Digite o nome de outro item ou \"não\" para prosseguir.",
   perguntarQuantidade: "Certo! Qual a quantidade de ITEM_NOME_PLACEHOLDER que você gostaria?",
+  verCarrinho: "Seu carrinho:\n\nITENS_CARRINHO_PLACEHOLDER\n\nTotal: R$ TOTAL_PLACEHOLDER\n\nDeseja finalizar o pedido ou adicionar mais itens?",
+  pedidoFinalizado: "Seu pedido foi finalizado com sucesso! Em breve, você receberá a confirmação e o status. Agradecemos a preferência!",
+  confirmacaoTitulo: "Certo! Confirmando seu pedido:\n\n",
+  perguntaConfirmarEndereco: "Seu endereço de entrega é: *ENDERECO_PLACEHOLDER*?\n",
+  confirmarEnderecoInstrucao: "Por favor, responda \"sim\" ou \"não\".",
+};
+
+// --- Mensagens de confirmação e feedback ---
+const confirmacao = {
+  confirmarDados: "Por favor, confirme seus dados:\n\nNome: NOME_PLACEHOLDER\nEndereço: ENDERECO_PLACEHOLDER\n\nEstá correto? (sim/não)",
+  agradecimentoFeedback: "Agradecemos seu feedback! Isso nos ajuda a melhorar.",
+  pedidoConfirmado: "Seu pedido #NUMERO_PEDIDO foi confirmado! O tempo estimado é de TEMPO_ESTIMADO minutos."
 };
 
 // --- Objeto 'mensagens' para a função getMensagem (combina as constantes acima) ---
@@ -63,6 +79,7 @@ const mensagens = {
   admin,
   cadastro,
   pedido,
+  confirmacao,
 };
 
 /**
@@ -94,6 +111,7 @@ module.exports = {
   admin,
   cadastro,
   pedido,
+  confirmacao,
   statusPedidoNaoEncontrado,
   statusPedido_PENDENTE,
   statusPedido_EM_PREPARO,
