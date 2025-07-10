@@ -1,4 +1,4 @@
-# # 09/07/25 12:12 feat(pedidos): Implementa funcionalidade de status e refatora gestão de pedidos
+# 09/07/25 12:12 feat(pedidos): Implementa funcionalidade de status e refatora gestão de pedidos
 
 Esta atualização introduz uma robusta funcionalidade de gerenciamento de status de pedidos, aprimorando a comunicação entre o bot, o painel de administração e os clientes.
 
