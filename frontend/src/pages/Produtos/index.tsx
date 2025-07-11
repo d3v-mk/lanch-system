@@ -1,9 +1,8 @@
 // src/pages/Produtos.tsx
 import { useEffect, useState } from 'react';
-// Remova as importações de Dialog, Transition, Fragment daqui, pois estarão no CardapioPreviewDialog
 import ProdutoList from './components/ProdutoList';
 import ProdutoDialog from './components/ProdutoDialog';
-import CardapioPreviewDialog from './components/CardapioPreviewDialog'; // <--- IMPORTA O NOVO DIÁLOGO MODULARIZADO
+import CardapioPreviewDialog from './components/CardapioPreviewDialog';
 import type { Produto, ProdutoInput } from '../../types';
 import { listarProdutos, criarProduto, deletarProduto } from '../../services/produtoService';
 
@@ -12,7 +11,7 @@ export default function Produtos() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDialog, setShowDialog] = useState(false);
-  const [showPreviewDialog, setShowPreviewDialog] = useState(false); // Estado para o diálogo de preview
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
 
   async function fetchProdutos() {
     setLoading(true);
@@ -30,8 +29,8 @@ export default function Produtos() {
   async function handleCreateProduto(novoProduto: ProdutoInput) {
     try {
       await criarProduto(novoProduto);
-      fetchProdutos(); // Recarrega a lista de produtos após a criação
-      setShowDialog(false); // Fecha o diálogo de cadastro
+      fetchProdutos();
+      setShowDialog(false);
     } catch (err: any) {
       alert('Erro ao cadastrar: ' + (err.response?.data?.erro || err.message || err));
     }
@@ -43,7 +42,7 @@ export default function Produtos() {
 
     try {
       await deletarProduto(id);
-      fetchProdutos(); // Recarrega a lista de produtos após a exclusão
+      fetchProdutos();
     } catch (err: any) {
       alert('Erro ao excluir: ' + (err.response?.data?.erro || err.message || err));
     }
@@ -76,14 +75,14 @@ export default function Produtos() {
         </button>
       </div>
 
-      {/* Diálogo de Cadastro de Produto */}
+      {/* Dialog de Cadastro de Produto */}
       <ProdutoDialog
         isOpen={showDialog}
         onClose={() => setShowDialog(false)}
         onSubmit={handleCreateProduto}
       />
 
-      {/* Diálogo de Prévia do Cardápio (Modularizado) */}
+      {/* Dialog de Prévia do Cardápio */}
       <CardapioPreviewDialog
         isOpen={showPreviewDialog}
         onClose={() => setShowPreviewDialog(false)}

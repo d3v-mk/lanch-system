@@ -16,3 +16,22 @@ export type Pedido = {
   observacao?: string | null;
   itens: ItemPedido[]; // Itens são obrigatórios e são um array de ItemPedido
 };
+
+export type PedidoPayload = {
+  id?: string; // ID é opcional para criação, mas necessário para atualização
+  clienteId: string;
+  observacao?: string | null;
+  total: number;
+  status?: OrderStatus; // Status pode ser opcional na criação, mas obrigatório para updateStatus
+  itens: ItemPedido[];
+};
+
+export type PedidoFormData = {
+  id?: string; // NOVO: Adiciona 'id' opcional para diferenciar edição de criação
+  clienteId: string;
+  observacao?: string | null;
+  total: number;
+  // Se o formulário fosse lidar com itens ou status, eles seriam adicionados aqui:
+  // status?: OrderStatus;
+  // itens?: ItemPedidoFormData[];
+};

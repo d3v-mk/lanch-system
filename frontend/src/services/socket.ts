@@ -1,9 +1,26 @@
-// src/services/socket.ts
+// frontend/src/services/socket.ts
 
-import { io } from 'socket.io-client'
+import { io, Socket } from 'socket.io-client';
 
-const socket = io('http://localhost:3000', {
-  transports: ['websocket'],
-})
+const SOCKET_SERVER_URL = 'http://localhost:3000'; 
 
-export default socket
+const socket: Socket = io(SOCKET_SERVER_URL, {
+  // Opcional: Adicione quaisquer opções de conexão aqui
+});
+
+export default socket; 
+
+// Funções utilitárias (opcionais, mas boas para ter)
+export const connectSocket = () => {
+  if (!socket.connected) {
+    socket.connect();
+    console.log('Socket: Tentando reconectar...');
+  }
+};
+
+export const disconnectSocket = () => {
+  if (socket.connected) {
+    socket.disconnect();
+    console.log('Socket: Desconectado.');
+  }
+};

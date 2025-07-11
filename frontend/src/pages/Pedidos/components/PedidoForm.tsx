@@ -1,16 +1,6 @@
 // frontend/src/pages/Pedidos/components/PedidoForm.tsx
 import React, { useState, useEffect } from 'react';
-
-// Definição do tipo para os dados do formulário
-export type PedidoFormData = {
-  id?: string; // NOVO: Adiciona 'id' opcional para diferenciar edição de criação
-  clienteId: string;
-  observacao?: string | null;
-  total: number;
-  // Se o formulário fosse lidar com itens ou status, eles seriam adicionados aqui:
-  // status?: OrderStatus;
-  // itens?: ItemPedidoFormData[];
-};
+import { PedidoFormData } from '../../../types';
 
 // Definição das props do componente PedidoForm
 type PedidoFormProps = {

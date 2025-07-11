@@ -1,22 +1,14 @@
 // frontend/src/contexts/PedidosContext.tsx
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
-import { io, Socket } from 'socket.io-client';
 
-interface Pedido {
-  id: string;
-  numeroPedido: number;
-  clienteId: string;
-  observacao: string;
-  criadoEm: string;
-  // ...
-}
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import socket from '../services/socket'; 
+import { Pedido } from '../types/pedidoType'; 
 
 interface PedidosContextType {
   newPedidosCount: number;
   resetNewPedidosCount: () => void;
   activateNotifications: () => void;
   soundActive: boolean;
-  // 🚨 NOVO: Uma função para registrar um callback quando um novo pedido chega
   onNewPedidoReceived: (callback: () => void) => () => void;
 }
 
@@ -38,12 +30,8 @@ const usePedidosInterno = () => {
   const [newPedidosCount, setNewPedidosCount] = useState(0);
   const [soundActive, setSoundActive] = useState(false);
   const notificationSoundRef = useRef<HTMLAudioElement | null>(null);
-  const socketRef = useRef<Socket | null>(null);
-
   const soundActiveRef = useRef(soundActive);
   const playNotificationSoundRef = useRef<(() => void) | null>(null);
-
-  // 🚨 NOVO: Ref para armazenar os callbacks registrados para "novo pedido"
   const newPedidoCallbacksRef = useRef<(() => void)[]>([]);
 
   useEffect(() => {
@@ -92,16 +80,9 @@ const usePedidosInterno = () => {
 
   useEffect(() => {
     console.log('useEffect (Socket.IO): Rodando (montagem).');
-
-    if (!socketRef.current) {
-      const socket = io('http://localhost:3000'); // 🚨 CONFIRME A PORTA!
-      socketRef.current = socket;
-
-      socket.on('connect', () => { console.log('✅ Socket conectado'); });
-      socket.on('disconnect', () => { console.log('❌ Socket desconectado'); });
-    }
-
-    const socket = socketRef.current;
+    
+    socket.on('connect', () => { console.log('✅ Socket conectado'); });
+    socket.on('disconnect', () => { console.log('❌ Socket desconectado'); });
 
     const handleNewOrder = (newOrder: Pedido) => {
       console.log('[Socket.IO] Novo pedido recebido:', newOrder);
@@ -110,7 +91,6 @@ const usePedidosInterno = () => {
       if (playNotificationSoundRef.current) {
         playNotificationSoundRef.current();
       }
-      // 🚨 NOVO: Chamar todos os callbacks registrados
       newPedidoCallbacksRef.current.forEach(callback => callback());
     };
 
@@ -127,10 +107,8 @@ const usePedidosInterno = () => {
     console.log('Contador de pedidos novos resetado para 0.');
   }, []);
 
-  // 🚨 NOVA FUNÇÃO EXPOSTA PELO CONTEXTO:
   const onNewPedidoReceived = useCallback((callback: () => void) => {
     newPedidoCallbacksRef.current.push(callback);
-    // Retorna uma função de "limpeza" para remover o callback
     return () => {
       newPedidoCallbacksRef.current = newPedidoCallbacksRef.current.filter(cb => cb !== callback);
     };

@@ -1,25 +1,17 @@
 // frontend/src/pages/Pedidos/hooks/usePedidoManagement.ts
 
-import { useState, useCallback, useEffect } from 'react'; // Adicionado useEffect
+import { useState, useCallback, useEffect } from 'react';
 
-import { Pedido, OrderStatus } from '../../../types/pedidoType';
-// Importe PedidoFormData
-import { PedidoFormData } from '../components/PedidoForm'; // Certifique-se de que este caminho está correto
+import { Pedido, OrderStatus, PedidoFormData, PedidoPayload } from '../../../types/pedidoType';
 
-// Importe todas as funções do serviço de pedidos
 import {
   updateOrderStatus,
   criarPedido,
-  updatePedido, // Renomeado de 'atualizarPedido' para 'updatePedido' na última atualização
-  PedidoPayload,
-  fetchPedidos,    // Renomeado de 'listarPedidos' para 'fetchPedidos'
-  deletePedido     // Renomeado de 'deletarPedido' para 'deletePedido'
+  updatePedido,
+  fetchPedidos,
+  deletePedido
 } from '../../../services/pedidoService';
 
-/**
- * Hook personalizado para gerenciar a lógica de criação, edição, exclusão e atualização de status de pedidos.
- * NÃO DEVE CONTER LÓGICA DE SOCKET.IO OU NOTIFICAÇÕES (elas vêm do PedidosContext).
- */
 export const usePedidoManagement = () => {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);

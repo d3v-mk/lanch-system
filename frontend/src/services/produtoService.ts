@@ -10,7 +10,7 @@ export async function listarProdutos(): Promise<Produto[]> {
 }
 
 export async function criarProduto(produto: ProdutoInput): Promise<Produto> {
-  // já converte o preco pra number antes de mandar
+
   const payload = { ...produto, preco: parseFloat(produto.preco as unknown as string) }
 
   const { data } = await axios.post(API_URL, payload)
