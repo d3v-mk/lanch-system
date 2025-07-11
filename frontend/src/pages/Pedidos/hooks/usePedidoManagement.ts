@@ -1,24 +1,102 @@
 // frontend/src/pages/Pedidos/hooks/usePedidoManagement.ts
 
-import { useState, useCallback } from 'react';
-import { usePedidos } from './usePedidos'; // Importa o hook existente de pedidos
-import { Pedido, OrderStatus } from '../../../types/pedidoType'; // Tipos de Pedido e OrderStatus
-import { updateOrderStatus, criarPedido, atualizarPedido, PedidoPayload } from '../../../services/pedidoService'; // Funções de serviço e PedidoPayload
-import { PedidoFormData } from '../components/PedidoForm'; // Tipo de dados do formulário
+import { useState, useCallback, useEffect } from 'react'; // Adicionado useEffect
+
+import { Pedido, OrderStatus } from '../../../types/pedidoType';
+// Importe PedidoFormData
+import { PedidoFormData } from '../components/PedidoForm'; // Certifique-se de que este caminho está correto
+
+// Importe todas as funções do serviço de pedidos
+import {
+  updateOrderStatus,
+  criarPedido,
+  updatePedido, // Renomeado de 'atualizarPedido' para 'updatePedido' na última atualização
+  PedidoPayload,
+  fetchPedidos,    // Renomeado de 'listarPedidos' para 'fetchPedidos'
+  deletePedido     // Renomeado de 'deletarPedido' para 'deletePedido'
+} from '../../../services/pedidoService';
 
 /**
- * Hook personalizado para gerenciar toda a lógica da página de Pedidos.
- * Inclui carregamento, criação, edição, exclusão e atualização de status de pedidos.
+ * Hook personalizado para gerenciar a lógica de criação, edição, exclusão e atualização de status de pedidos.
+ * NÃO DEVE CONTER LÓGICA DE SOCKET.IO OU NOTIFICAÇÕES (elas vêm do PedidosContext).
  */
 export const usePedidoManagement = () => {
-  // Estados do hook usePedidos (carregamento, erro, lista de pedidos, função de exclusão)
-  const { pedidos, loading, error, loadPedidos, excluirPedido } = usePedidos();
+  const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Estados locais para o formulário de pedido
+  // loadPedidos é uma função de callback para ser estável e recarregada apenas quando necessário
+  const loadPedidos = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await fetchPedidos();
+      setPedidos(data);
+    } catch (err) {
+      console.error('Erro ao carregar pedidos:', err);
+      setError('Falha ao carregar pedidos.');
+    } finally {
+      setLoading(false);
+    }
+  }, []); // Sem dependências para que seja criada apenas uma vez
+
+  // Lógica para excluir pedido
+  const excluirPedido = useCallback(async (id: string) => {
+    if (window.confirm('Tem certeza que deseja excluir este pedido?')) {
+      try {
+        await deletePedido(id);
+        alert('Pedido excluído com sucesso!');
+        loadPedidos(); // Recarrega a lista após a exclusão
+      } catch (err) {
+        console.error('Erro ao excluir pedido:', err);
+        alert('Erro ao excluir pedido.');
+      }
+    }
+  }, [loadPedidos]); // Depende de loadPedidos para garantir que a versão mais recente seja usada
+
+  // Carrega os pedidos na montagem inicial do hook (e, portanto, da página que o usa)
+  useEffect(() => {
+    loadPedidos();
+    // No futuro, se houver um evento de socket para "pedido atualizado/excluido",
+    // você pode chamar loadPedidos() aqui para manter a lista em tempo real.
+  }, [loadPedidos]); // Depende de loadPedidos para que seja executado se a função mudar (o que não deve acontecer)
+
+
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [pedidoFormData, setPedidoFormData] = useState<PedidoFormData | undefined>(undefined);
 
-  // Função para lidar com a atualização do status do pedido (chamada pelo PedidoList)
+  const onCloseForm = useCallback(() => {
+    setIsFormOpen(false);
+    setPedidoFormData(undefined);
+    loadPedidos(); // Recarrega os pedidos após fechar o formulário
+  }, [loadPedidos]); // Depende de loadPedidos
+
+  const handleSubmitForm = useCallback(async (data: PedidoFormData) => {
+    try {
+      const payload: PedidoPayload = {
+        id: data.id,
+        clienteId: data.clienteId,
+        observacao: data.observacao,
+        total: data.total,
+        // O status é adicionado apenas na criação se o ID não existe
+        ...(data.id ? {} : { status: 'PENDENTE' }),
+        itens: [], // Assumindo que itens são tratados em outro lugar ou são opcionais para esta payload simples
+      };
+
+      if (payload.id) {
+        await updatePedido(payload); // 🚨 Corrigido para updatePedido
+        alert('Pedido atualizado com sucesso!');
+      } else {
+        await criarPedido(payload);
+        alert('Pedido criado com sucesso!');
+      }
+      onCloseForm();
+    } catch (err) {
+      console.error('Erro ao salvar pedido:', err);
+      alert('Erro ao salvar pedido.');
+    }
+  }, [criarPedido, updatePedido, onCloseForm]); // 🚨 Adicionadas dependências criarPedido e updatePedido
+
   const handleUpdateStatus = useCallback(async (pedidoId: string, currentStatus: string) => {
     let nextStatus: OrderStatus;
     switch (currentStatus as OrderStatus) {
@@ -49,74 +127,36 @@ export const usePedidoManagement = () => {
       try {
         await updateOrderStatus(pedidoId, nextStatus);
         alert(`Status do pedido ${pedidoId.substring(0, 8)}... atualizado para ${nextStatus}!`);
-        loadPedidos(); // Recarrega a lista para atualizar a UI
+        loadPedidos(); // Recarrega a lista após a atualização de status
       } catch (err) {
         console.error('Erro ao atualizar status:', err);
         alert('Erro ao atualizar status do pedido.');
       }
     }
-  }, [loadPedidos]); // Depende de loadPedidos para recarregar a lista
+  }, [loadPedidos]); // Depende de loadPedidos
 
-  // Função para lidar com a edição de um pedido (chamada pelo PedidoList)
   const handleEditPedido = useCallback((pedido: Pedido) => {
-    // Transforma o objeto Pedido completo para o formato PedidoFormData
     const dataForForm: PedidoFormData = {
       id: pedido.id,
       clienteId: pedido.cliente.id,
       observacao: pedido.observacao,
       total: pedido.total,
-      // Não inclua 'status' ou 'itens' aqui, pois PedidoFormData não os possui
-      // e eles serão definidos no payload de envio.
+      // Se PedidoFormData precisa de mais campos de Pedido, adicione aqui
     };
-    setPedidoFormData(dataForForm); // Define os dados para o formulário
-    setIsFormOpen(true); // Abre o formulário
-  }, []); // Sem dependências, função estável
-
-  // Função para abrir o formulário para um NOVO pedido (chamada pelo botão "Novo Pedido")
-  const handleNewPedido = useCallback(() => {
-    setPedidoFormData(undefined); // Garante que o formulário esteja limpo para um novo pedido
+    setPedidoFormData(dataForForm);
     setIsFormOpen(true);
-  }, []); // Sem dependências, função estável
+  }, []);
 
-  // Função para lidar com o envio do formulário (criação ou atualização)
-  const handleSubmitForm = useCallback(async (data: PedidoFormData) => {
-    try {
-      // Constrói o PedidoPayload completo para enviar ao backend
-      const payload: PedidoPayload = {
-        id: data.id, // Inclui o ID se for uma atualização
-        clienteId: data.clienteId,
-        observacao: data.observacao,
-        total: data.total,
-        status: 'PENDENTE', // Status padrão para novos pedidos (ou mantenha o do pedido existente se for edição e o form não o alterar)
-        itens: [], // Itens padrão vazios, se o formulário não gerenciar itens
-      };
+  const handleNewPedido = useCallback(() => {
+    setPedidoFormData(undefined); // Limpa o formulário para um novo pedido
+    setIsFormOpen(true);
+  }, []);
 
-      if (payload.id) { // Se houver um ID, é uma atualização
-        await atualizarPedido(payload);
-        alert('Pedido atualizado com sucesso!');
-      } else { // Caso contrário, é uma criação
-        await criarPedido(payload);
-        alert('Pedido criado com sucesso!');
-      }
-      onCloseForm(); // Fecha o formulário e recarrega os pedidos
-    } catch (err) {
-      console.error('Erro ao salvar pedido:', err);
-      alert('Erro ao salvar pedido.');
-    }
-  }, [atualizarPedido, criarPedido]); // Dependências das funções de serviço
-
-  // Função para fechar o formulário de pedido
-  const onCloseForm = useCallback(() => {
-    setIsFormOpen(false);
-    setPedidoFormData(undefined); // Limpa os dados do formulário
-    loadPedidos(); // Recarrega os pedidos após fechar o formulário
-  }, [loadPedidos]); // Depende de loadPedidos
-
-  // Retorna todos os estados e handlers necessários para o componente de UI
   return {
     pedidos,
     loading,
     error,
+    loadPedidos, // Exponha o loadPedidos se a página precisar chamá-lo manualmente
     isFormOpen,
     pedidoFormData,
     handleUpdateStatus,
@@ -124,6 +164,6 @@ export const usePedidoManagement = () => {
     handleNewPedido,
     handleSubmitForm,
     onCloseForm,
-    excluirPedido, // A função de exclusão ainda é exposta
+    excluirPedido,
   };
 };

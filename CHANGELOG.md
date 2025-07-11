@@ -1,3 +1,15 @@
+# 11/07/25 14:30 feat: Implementa sistema de notificações/som e atualização em tempo real de pedidos
+
+- Migra a lógica de Socket.IO e notificações para um contexto global (PedidosContext) para garantir uma única instância e estado consistente.
+- Adiciona notificação sonora e visual (bolinha na sidebar) para novos pedidos em tempo real.
+- Permite a ativação/desativação manual das notificações pelo usuário.
+- Refatora `usePedidoManagement` para focar exclusivamente na gestão de dados da página de pedidos.
+- Habilita a atualização automática da lista de pedidos na página de "Pedidos" via comunicação com o PedidosContext.
+- Ajusta paths de áudio e configurações de serviço de pedidos.
+- Remove hook de pedidos obsoleto.
+
+---
+
 # 10/07/25 17:30 feat(cardapio):  sistema de cardápio dinâmico com imagem
 
 Adiciona a funcionalidade de "Cardápio Inteligente", que permite a criação e gerenciamento de categorias de produtos e gera uma imagem de cardápio dinamicamente.
