@@ -59,8 +59,8 @@ export async function generateMenuImage(): Promise<Buffer> {
   const categoryTitleSpacing = 50; // Espaço antes de um novo título de categoria
   const categoryTitleHeight = 35; // Altura do background do título da categoria
 
-  const headerHeight = 150; // Mais espaço para título principal e logo
-  const footerHeight = 120; // Mais espaço para rodapé
+  const headerHeight = 170; // Mais espaço para título principal e logo
+  const footerHeight = 90; // Mais espaço para rodapé
 
   // --- Criação inicial do Canvas e Contexto para medições ---
   const tempCanvas = createCanvas(canvasWidth, 100);
@@ -161,45 +161,57 @@ export async function generateMenuImage(): Promise<Buffer> {
 
   // Função auxiliar para desenhar um item
   const drawMenuItem = (item: any, x: number, y: number, colMaxWidth: number) => {
-    // Nome do item
-    ctx.font = 'bold 20px Arial';
-    ctx.fillStyle = '#333333';
+  // Define fonte do produto + preço
+  ctx.font = 'bold 20px Arial';
+  ctx.fillStyle = '#333333';
+  ctx.textAlign = 'left';
+
+  // Monta a linha: nome + pontos + preço
+  const nome = item.nome.trim();
+  const preco = `R$ ${parseFloat(item.preco.toString()).toFixed(2).replace('.', ',')}`;
+  const dots = '.'.repeat(80); // vai ser cortado com medida abaixo
+
+  const fullLine = `${nome} ${dots}`;
+  let trimmedLine = fullLine;
+
+  while (ctx.measureText(trimmedLine + preco).width > colMaxWidth) {
+    trimmedLine = trimmedLine.slice(0, -1); // corta ponto por ponto até caber
+  }
+
+  ctx.fillText(trimmedLine, x, y);
+  ctx.textAlign = 'right';
+  ctx.fillText(preco, x + colMaxWidth, y);
+
+  let nextY = y + itemLineHeight;
+
+  // Descrição (se existir)
+  if (item.descricao) {
+    ctx.font = '16px Arial';
+    ctx.fillStyle = '#666666';
     ctx.textAlign = 'left';
-    ctx.fillText(item.nome, x, y);
 
-    // Preço
-    ctx.font = 'bold 20px Arial';
-    ctx.fillStyle = '#e74c3c'; // Usa a cor de destaque para o preço
-    ctx.textAlign = 'right';
-    const priceText = `R$ ${parseFloat(item.preco.toString()).toFixed(2).replace('.', ',')}`;
-    ctx.fillText(priceText, x + colMaxWidth, y);
-
-    let nextY = y + itemLineHeight;
-
-    // Descrição (se existir)
-    if (item.descricao) {
-      ctx.font = '16px Arial';
-      ctx.fillStyle = '#666666';
-      ctx.textAlign = 'left';
-      const words = item.descricao.split(' ');
-      let line = '';
-      for (let n = 0; n < words.length; n++) {
-        const testLine = line + words[n] + ' ';
-        const metrics = ctx.measureText(testLine);
-        const testWidth = metrics.width;
-        if (testWidth > colMaxWidth && n > 0) {
-          ctx.fillText(line.trim(), x + 10, nextY); // Aumenta a indentação para a descrição
-          line = words[n] + ' ';
-          nextY += descriptionLineHeight;
-        } else {
-          line = testLine;
-        }
+    const maxWidth = colMaxWidth;
+    const words = item.descricao.split(' ');
+    let line = '';
+    for (let n = 0; n < words.length; n++) {
+      const testLine = line + words[n] + ' ';
+      const metrics = ctx.measureText(testLine);
+      const testWidth = metrics.width;
+      if (testWidth > maxWidth && n > 0) {
+        ctx.fillText(line.trim(), x + 10, nextY); // indentação da descrição
+        line = words[n] + ' ';
+        nextY += descriptionLineHeight;
+      } else {
+        line = testLine;
       }
-      ctx.fillText(line.trim(), x + 10, nextY); // Aumenta a indentação para a última linha
-      nextY += descriptionLineHeight;
     }
-    return nextY + itemBlockSpacing;
-  };
+    ctx.fillText(line.trim(), x + 10, nextY);
+    nextY += descriptionLineHeight;
+  }
+
+  return nextY + itemBlockSpacing;
+};
+
 
   // Desenha as categorias
   for (const categoryName of categoriesToDraw) {
@@ -289,10 +301,6 @@ export async function generateMenuImage(): Promise<Buffer> {
   ctx.fillText('@grandesite', canvasWidth / 2, canvas.height - footerHeight / 2 - 15);
   ctx.fillText('(12) 3456-7890', canvasWidth / 2, canvas.height - footerHeight / 2 + 10);
 
-  // Ícone de hambúrguer simples no rodapé (usando emoji de texto)
-  ctx.font = '40px Arial';
-  ctx.fillText('🍔', canvasWidth / 2 - 150, canvas.height - footerHeight / 2); // À esquerda do centro
-  ctx.fillText('🍔', canvasWidth / 2 + 150, canvas.height - footerHeight / 2); // À direita do centro
-
+  // --- Finalização ---
   return canvas.toBuffer('image/png'); // Retorna a imagem como um buffer PNG
 }
