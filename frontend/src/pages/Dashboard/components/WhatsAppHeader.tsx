@@ -20,7 +20,7 @@ function bolinha(corFixa: string, corAnimada: string) {
 }
 
 export default function WhatsAppHeader() {
-  const { botStatus, qrCode, conectarBot, connecting } = useBotStatus()
+  const { botStatus, qrCode, conectarBot, connecting, botError } = useBotStatus()
   const [mostrarQR, setMostrarQR] = useState(false)
 
   const isQR = botStatus === 'qr'
@@ -102,6 +102,12 @@ export default function WhatsAppHeader() {
           )}
         </div>
       </header>
+
+      {botError && (
+        <div className="bg-red-100 text-red-600 px-4 py-2 text-sm text-center">
+          ⚠️ Não foi possível se conectar ao bot.
+        </div>
+      )}
 
       {mostrarQR && qrCode && (
         <QRCodeDialog qrCode={qrCode} onClose={() => setMostrarQR(false)} />
