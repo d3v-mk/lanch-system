@@ -2,7 +2,8 @@
 
 const { pegarProdutoPorNome } = require('../services/produtoService'); // Importa o serviço para buscar produtos
 const { normalizeStringForSearch } = require('@utils/normalizeText'); // Importa função para normalizar texto
-const mensagens = require('@utils/mensagens'); // Mensagens para o cliente
+const mensagens = require('@utils/mensagens'); // OK: Mensagens para o cliente
+const { sendMessage } = require('@core/messageSender'); // NOVO: Importa a função sendMessage
 
 // CORREÇÃO: A ordem dos parâmetros deve ser (sock, msg, estado)
 async function handleEscolherItem(sock, msg, estado) {
@@ -23,7 +24,8 @@ async function handleEscolherItem(sock, msg, estado) {
   // Esta função agora espera que o usuário já tenha digitado o item
   if (!itemParaBusca) {
     // Se o texto estiver vazio, pede para o usuário digitar um item
-    await sock.sendMessage(userId, { text: mensagens.pedido.perguntarItem || "Opa! Qual item você gostaria de pedir? (Ex: X-Tudo, Refrigerante)" });
+    // REFATORADO: Usando sendMessage e mensagens.pedido.perguntarItem
+    await sendMessage(sock, userId, { text: mensagens.pedido.perguntarItem }, 'Escolher Item - Mensagem Vazia');
     estado.etapa = 'aguardando_selecao_item'; // Mantém ou define a etapa para aguardar seleção
     console.log(`[Escolher Item] Mensagem vazia, solicitando item para ${clientName}.`);
     return true;
@@ -49,20 +51,23 @@ async function handleEscolherItem(sock, msg, estado) {
 
       // Avança para a etapa de perguntar "algo mais?"
       estado.etapa = 'aguardando_algo_mais';
-      await sock.sendMessage(userId, { text: mensagens.pedido.itemAdicionado || `"${produtoEncontrado.nome}" adicionado ao seu pedido! Algo mais? Digite o nome de outro item ou "não" para prosseguir.` });
+      // REFATORADO: Usando sendMessage e mensagens.pedido.itemAdicionado (que é uma função)
+      await sendMessage(sock, userId, { text: mensagens.pedido.itemAdicionado(produtoEncontrado.nome) }, 'Escolher Item - Adicionado');
       console.log(`[Escolher Item] Item '${produtoEncontrado.nome}' adicionado ao carrinho para ${clientName}.`);
       return true;
 
     } else {
       // Item não encontrado
-      await sock.sendMessage(userId, { text: mensagens.pedido.itemNaoEncontrado || `Desculpe, não temos *${textoOriginalDaMensagem}* em nosso cardápio. Por favor, escolha outro item.` });
+      // REFATORADO: Usando sendMessage e mensagens.pedido.itemNaoEncontrado
+      await sendMessage(sock, userId, { text: mensagens.pedido.itemNaoEncontrado }, 'Escolher Item - Nao Encontrado');
       estado.etapa = 'aguardando_item'; // Permanece na etapa de aguardar item (ou pode voltar para 'aguardando_selecao_item')
       console.log(`[Escolher Item] Item '${textoOriginalDaMensagem}' não encontrado para ${clientName}.`);
       return true; // Continua na mesma etapa
     }
   } catch (error) {
     console.error(`[Escolher Item] ERRO ao buscar produto para ${clientName}:`, error);
-    await sock.sendMessage(userId, { text: mensagens.erros.erroInterno || "Desculpe, ocorreu um erro ao buscar o item. Por favor, tente novamente." });
+    // REFATORADO: Usando sendMessage e mensagens.erros.erroInterno
+    await sendMessage(sock, userId, { text: mensagens.erros.erroInterno }, 'Escolher Item - Erro Busca');
     // Opcional: Limpar o estado ou voltar para uma etapa segura
     return false;
   }

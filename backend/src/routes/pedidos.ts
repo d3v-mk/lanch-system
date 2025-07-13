@@ -183,20 +183,28 @@ router.get('/cliente/:clienteId/latest-status', async (req, res) => {
 
   try {
     const latestPedido = await prisma.pedido.findFirst({
-      where: { cliente: { telefone: clienteId } }, // Busca pelo telefone do cliente
-      orderBy: { criadoEm: 'desc' }, // Pega o pedido mais recente
+      where: {
+        cliente: { telefone: clienteId },
+        // NOVO: Adiciona filtro para status "ativos"
+        status: {
+          notIn: ['ENTREGUE', 'CANCELADO'] // Exclui status de finalizados/inativos
+        }
+      },
+      orderBy: { criadoEm: 'desc' }, // Pega o pedido mais recente entre os ativos
       select: {
         id: true,
         status: true,
         criadoEm: true,
-        numeroPedido: true, // Inclui o número do pedido, pode ser útil
+        numeroPedido: true,
       }
     });
 
     if (!latestPedido) {
-      return res.status(404).json({ message: 'Nenhum pedido encontrado para este cliente.' });
+      // Se não encontrou nenhum pedido ATIVO, retorna 404
+      return res.status(404).json({ message: 'Nenhum pedido ativo encontrado para este cliente.' });
     }
 
+    // Se encontrou, retorna o pedido mais recente com status ativo
     res.json(latestPedido);
   } catch (error) {
     console.error('Erro ao buscar último status do pedido para cliente:', error);

@@ -1,7 +1,8 @@
 // src/commands/pedir/etapas/confirmarPedido.js
 
 const { estadosDeConversa } = require('@config/state');
-const { getMensagem } = require('@utils/mensagens'); // Importa getMensagem
+const mensagens = require('@utils/mensagens'); // Importa o objeto 'mensagens' completo
+const { sendMessage } = require('@core/messageSender'); // Importa a função sendMessage
 
 async function handleConfirmarPedido(sock, msg, estado) {
   const userId = msg.key.remoteJid;
@@ -14,7 +15,8 @@ async function handleConfirmarPedido(sock, msg, estado) {
   if (!estado.dados.carrinho || estado.dados.carrinho.length === 0) {
     console.error(`🚨 [Confirmar Pedido] Erro: Carrinho vazio na etapa de confirmação de pedido para ${clientName}.`);
     try {
-      await sock.sendMessage(userId, { text: getMensagem('erros.carrinhoVazio') });
+      // REFATORADO: Usando sendMessage e acesso direto a mensagens.erros.carrinhoVazio
+      await sendMessage(sock, userId, { text: mensagens.erros.carrinhoVazio }, 'Confirmar Pedido - Carrinho Vazio');
     } catch (sendError) {
       console.error(`[Confirmar Pedido] ERRO CRÍTICO: Falha ao enviar mensagem de carrinho vazio para ${clientName}:`, sendError);
     }
@@ -25,7 +27,8 @@ async function handleConfirmarPedido(sock, msg, estado) {
   if (!estado.cliente || !estado.cliente.endereco) {
     console.error(`🚨 [Confirmar Pedido] Erro: Dados do cliente ou endereço ausentes para ${clientName}.`);
     try {
-      await sock.sendMessage(userId, { text: getMensagem('erros.dadosClienteAusentes') });
+      // REFATORADO: Usando sendMessage e acesso direto a mensagens.erros.dadosClienteAusentes
+      await sendMessage(sock, userId, { text: mensagens.erros.dadosClienteAusentes }, 'Confirmar Pedido - Dados Cliente Ausentes');
     } catch (sendError) {
       console.error(`[Confirmar Pedido] ERRO CRÍTICO: Falha ao enviar mensagem de dados ausentes para ${clientName}:`, sendError);
     }
@@ -33,7 +36,8 @@ async function handleConfirmarPedido(sock, msg, estado) {
     return false;
   }
 
-  let mensagemConfirmacao = getMensagem('pedido.confirmacaoTitulo');
+  // REFATORADO: Acessando diretamente mensagens.pedido.confirmacaoTitulo
+  let mensagemConfirmacao = mensagens.pedido.confirmacaoTitulo;
   let totalPedido = 0;
 
   estado.dados.carrinho.forEach(item => {
@@ -49,15 +53,23 @@ async function handleConfirmarPedido(sock, msg, estado) {
 
   mensagemConfirmacao += `\nTotal do Pedido: *R$ ${totalPedido.toFixed(2).replace('.', ',')}*\n`;
 
-  // Preenche o placeholder do endereço
-  mensagemConfirmacao += getMensagem('pedido.perguntaConfirmarEndereco').replace('ENDERECO_PLACEHOLDER', estado.cliente.endereco);
-  mensagemConfirmacao += `\n${getMensagem('pedido.confirmarEnderecoInstrucao')}`;
+  // REFATORADO: Acessando mensagens.pedido.perguntaConfirmarEndereco como função ou string
+  // Assumo que 'perguntaConfirmarEndereco' é uma função que recebe o endereço
+  // Se for uma string simples com placeholder, continue usando .replace()
+  // Se for uma função como eu sugeri na refatoração do mensagens.js, use:
+  // mensagemConfirmacao += mensagens.pedido.perguntaConfirmarEndereco(estado.cliente.endereco);
+  mensagemConfirmacao += mensagens.pedido.perguntaConfirmarEndereco(estado.cliente.endereco);
+
+
+  // REFATORADO: Acessando diretamente mensagens.pedido.confirmarEnderecoInstrucao
+  mensagemConfirmacao += `\n${mensagens.pedido.confirmarEnderecoInstrucao}`;
 
   estado.etapa = 'confirmar_endereco';
   estado.dados.totalPedido = totalPedido;
 
   try {
-    await sock.sendMessage(userId, { text: mensagemConfirmacao });
+    // REFATORADO: Usando sendMessage
+    await sendMessage(sock, userId, { text: mensagemConfirmacao }, 'Confirmar Pedido - Envio Confirmacao');
     console.log(`[Confirmar Pedido] Mensagem de confirmação de pedido ENVIADA para ${clientName}.`);
   } catch (sendError) {
     console.error(`[Confirmar Pedido] ERRO CRÍTICO: Falha ao enviar mensagem de confirmação para ${clientName}:`, sendError);

@@ -1,7 +1,8 @@
 // bot-wpp/src/commands/cardapio/index.js
 
 const axios = require('axios');
-const { sendWhatsAppMessage, sendWhatsAppImage } = require('../../utils/mensagens');
+const { sendMessage } = require('../../core/messageSender'); // REFATORADO: Importa sendMessage
+const mensagens = require('../../utils/mensagens'); // REFATORADO: Importa o objeto mensagens
 
 const { BACKEND_API_URL } = process.env;
 
@@ -15,21 +16,19 @@ module.exports = {
    * @param {object} msg - O objeto da mensagem recebida do WhatsApp.
    * @param {string[]} args - Array de argumentos passados com o comando. (Mantido para consistência, mesmo que não usado aqui)
    */
-  // **CORREÇÃO AQUI:** Mude a assinatura da função 'handle' para receber os parâmetros separadamente.
-  handle: async (sock, msg, args) => { // Agora espera sock, msg e args
-    // Use 'msg' diretamente para acessar as propriedades da mensagem.
-    const jid = msg?.key?.remoteJid;
+  handle: async (sock, msg, args) => {
+    const userId = msg?.key?.remoteJid; // Renomeado jid para userId para consistência
 
-    // Se o JID do remetente não puder ser obtido, loga um erro e sai da função.
-    if (!jid) {
-      console.error("[/cardapio] Erro: Não foi possível obter o JID do remetente da mensagem. Objeto da mensagem:", msg);
-      // Você pode adicionar uma mensagem de fallback para o usuário aqui se o 'msg' for minimamente válido.
+    // Se o userId do remetente não puder ser obtido, loga um erro e sai da função.
+    if (!userId) {
+      console.error("[/cardapio] Erro: Não foi possível obter o userId do remetente da mensagem. Objeto da mensagem:", msg);
+      // Não há como enviar mensagem de fallback sem o userId.
       return;
     }
 
     try {
-      // Use 'sock' para enviar mensagens.
-      await sendWhatsAppMessage(sock, jid, 'Um momento, estou gerando o cardápio em imagem...');
+      // REFATORADO: Usando sendMessage com a mensagem de "gerando cardápio"
+      await sendMessage(sock, userId, { text: mensagens.cardapio.gerandoCardapio }, 'Cardapio - Gerando Imagem');
 
       const response = await axios.get(`${BACKEND_API_URL}/cardapio/cardapio-image`, {
         responseType: 'arraybuffer'
@@ -37,24 +36,28 @@ module.exports = {
 
       const imageBuffer = Buffer.from(response.data, 'binary');
 
-      // Use 'sock' para enviar a imagem.
-      await sendWhatsAppImage(sock, jid, imageBuffer, 'Aqui está o nosso cardápio!');
+      // REFATORADO: Usando sendMessage para enviar a imagem
+      // sendWhatsAppImage não existe mais. sendMessage lida com diferentes tipos de mensagem.
+      await sendMessage(sock, userId, { image: imageBuffer, caption: mensagens.cardapio.legendaImagem }, 'Cardapio - Imagem Enviada');
 
     } catch (error) {
       console.error('Erro ao processar comando /cardapio (imagem):', error);
 
-      let errorMessage = 'Desculpe, não consegui gerar a imagem do cardápio no momento. Por favor, tente novamente mais tarde.';
+      let errorMessage;
 
       if (axios.isAxiosError(error) && error.response && error.response.data) {
         try {
           const errorData = JSON.parse(Buffer.from(error.response.data).toString());
-          errorMessage = `Erro ao buscar imagem do cardápio: ${errorData.erro || 'Verifique o servidor.'}`;
+          errorMessage = errorData.erro || mensagens.erros.erroGenericoBackend; // Usando mensagem do módulo
         } catch (parseError) {
-          errorMessage = `Erro ao buscar imagem do cardápio: ${error.message}`;
+          errorMessage = mensagens.erros.erroAoGerarImagem; // Usando mensagem do módulo
         }
+      } else {
+        errorMessage = mensagens.erros.erroAoGerarImagem; // Usando mensagem do módulo
       }
-      // Use 'sock' para enviar a mensagem de erro.
-      await sendWhatsAppMessage(sock, jid, errorMessage);
+      
+      // REFATORADO: Usando sendMessage para enviar a mensagem de erro.
+      await sendMessage(sock, userId, { text: errorMessage }, 'Cardapio - Erro');
     }
   },
 };

@@ -1,8 +1,9 @@
-// src/commands/pedir/etapas/confirmarEndereco.js (CORRIGIDO)
+// src/commands/pedir/etapas/confirmarEndereco.js
 
 const axios = require('axios');
 const { estadosDeConversa } = require('@config/state');
-const mensagens = require('@utils/mensagens'); // Importa mensagens para respostas
+const mensagens = require('@utils/mensagens'); // OK: Importa mensagens para respostas
+const { sendMessage } = require('@core/messageSender'); // NOVO: Importa a função sendMessage
 
 // URL da API do seu backend para pedidos e clientes
 const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:3000/api'; // Certifique-se que esta variável está no .env do BACKEND
@@ -19,9 +20,10 @@ async function handleConfirmarEndereco(sock, msg, estado) {
   console.log('Dados do estado de confirmação de endereço:', JSON.stringify(estado.dados));
 
   // Função auxiliar para finalizar a conversa e enviar uma mensagem
-  const finalizarConversa = async (messageText) => {
+  // REFATORADO: Usando sendMessage aqui também
+  const finalizarConversa = async (messageText, logContext = 'Finalizar Conversa') => {
     try {
-      await sock.sendMessage(userId, { text: messageText });
+      await sendMessage(sock, userId, { text: messageText }, `Confirmar Endereço - ${logContext}`);
       console.log(`[Confirmar Endereço] Conversa finalizada para ${clientName} com mensagem: "${messageText}"`);
     } catch (sendError) {
       console.error(`[Confirmar Endereço] ERRO CRÍTICO: Falha ao enviar mensagem de finalização para ${clientName}:`, sendError);
@@ -39,7 +41,8 @@ async function handleConfirmarEndereco(sock, msg, estado) {
 
       if (!estado.dados.carrinho || estado.dados.carrinho.length === 0) {
         console.error(`🚨 [Confirmar Endereço] Erro: Carrinho vazio ao tentar enviar o pedido para ${clientName}.`);
-        return await finalizarConversa(mensagens.erros.carrinhoVazio || 'Erro interno: Seu pedido está vazio. Tente novamente mais tarde.');
+        // REFATORADO: Acessando diretamente mensagens.erros.carrinhoVazio
+        return await finalizarConversa(mensagens.erros.carrinhoVazio, 'Erro Enviar Pedido - Carrinho Vazio');
       }
 
       // Mapeia os itens do carrinho para o formato esperado pela API de pedidos
@@ -62,15 +65,17 @@ async function handleConfirmarEndereco(sock, msg, estado) {
       console.log(`[Confirmar Endereço] Pedido enviado com sucesso para o backend para ${clientName}. Resposta:`, response.data);
 
       // MUDANÇA: Agora finaliza a conversa após o pedido completo
-      return await finalizarConversa(mensagens.pedido.pedidoRecebidoConfirmado || 'Pedido recebido e confirmado! Agradecemos a preferência 😊');
+      // REFATORADO: Acessando diretamente mensagens.pedido.pedidoFinalizado
+      return await finalizarConversa(mensagens.pedido.pedidoFinalizado, 'Pedido Enviado Sucesso');
 
     } catch (e) {
       console.error(`[Confirmar Endereço] ERRO ao enviar o pedido para ${clientName}:`, e.response?.data || e.message);
-      let mensagemErro = mensagens.erros.erroInterno || 'Ocorreu um erro ao finalizar seu pedido. Tente novamente mais tarde.';
+      // REFATORADO: Acessando diretamente mensagens.erros.erroInterno
+      let mensagemErro = mensagens.erros.erroInterno;
       if (e.response && e.response.data && e.response.data.erro) {
         mensagemErro = `Erro ao finalizar pedido: ${e.response.data.erro}`;
       }
-      return await finalizarConversa(mensagemErro);
+      return await finalizarConversa(mensagemErro, 'Erro Enviar Pedido - Backend');
     }
   };
 
@@ -82,7 +87,8 @@ async function handleConfirmarEndereco(sock, msg, estado) {
     } else if (texto === 'não' || texto === 'nao') {
       estado.etapa = 'aguardando_novo_endereco';
       try {
-        await sock.sendMessage(userId, { text: mensagens.pedido.novoEnderecoPergunta || 'Ok. Por favor, digite seu novo endereço completo (Rua, Número, Bairro, Cidade, CEP).' });
+        // REFATORADO: Usando sendMessage e mensagens.pedido.novoEnderecoPergunta
+        await sendMessage(sock, userId, { text: mensagens.pedido.novoEnderecoPergunta }, 'Confirmar Endereco - Solicitar Novo');
         console.log(`[Confirmar Endereço] Solicitando novo endereço para ${clientName}.`);
       } catch (sendError) {
         console.error(`[Confirmar Endereço] ERRO CRÍTICO: Falha ao enviar 'novo endereço' para ${clientName}:`, sendError);
@@ -90,7 +96,8 @@ async function handleConfirmarEndereco(sock, msg, estado) {
       return true;
     } else {
       try {
-        await sock.sendMessage(userId, { text: mensagens.pedido.respostaInvalidaEndereco || 'Por favor, responda "sim" ou "não" sobre a confirmação do endereço.' });
+        // REFATORADO: Usando sendMessage e mensagens.pedido.respostaInvalidaEndereco
+        await sendMessage(sock, userId, { text: mensagens.pedido.respostaInvalidaEndereco }, 'Confirmar Endereco - Resposta Invalida');
         console.log(`[Confirmar Endereço] Resposta inválida de endereço de ${clientName}.`);
       } catch (sendError) {
         console.error(`[Confirmar Endereço] ERRO CRÍTICO: Falha ao enviar 'resposta inválida' para ${clientName}:`, sendError);
@@ -104,7 +111,8 @@ async function handleConfirmarEndereco(sock, msg, estado) {
     const novoEndereco = textoOriginal.trim(); // Usar textoOriginal aqui para preservar a capitalização/formato
     if (novoEndereco.length < 5) { // Validação básica
       try {
-        await sock.sendMessage(userId, { text: mensagens.pedido.enderecoCurto || 'Endereço muito curto. Por favor, digite seu endereço completo.' });
+        // REFATORADO: Usando sendMessage e mensagens.pedido.enderecoCurto
+        await sendMessage(sock, userId, { text: mensagens.pedido.enderecoCurto }, 'Confirmar Endereco - Endereco Curto');
         console.log(`[Confirmar Endereço] Endereço muito curto de ${clientName}.`);
       } catch (sendError) {
         console.error(`[Confirmar Endereço] ERRO CRÍTICO: Falha ao enviar 'endereço curto' para ${clientName}:`, sendError);
@@ -122,10 +130,11 @@ async function handleConfirmarEndereco(sock, msg, estado) {
 
       estado.etapa = 'aguardando_confirmacao_final_endereco';
       try {
-        await sock.sendMessage(userId, { text: mensagens.pedido.enderecoAtualizadoSucesso || 'Endereço atualizado com sucesso!' });
-        await sock.sendMessage(userId, {
-          text: mensagens.pedido.confirmarNovoEnderecoPergunta || `Seu novo endereço de entrega é: *${novoEndereco}*?\n\nPor favor, responda "sim" para confirmar e finalizar o pedido, ou "não" para digitar novamente.`
-        });
+        // REFATORADO: Usando sendMessage e mensagens.pedido.enderecoAtualizadoSucesso
+        await sendMessage(sock, userId, { text: mensagens.pedido.enderecoAtualizadoSucesso }, 'Confirmar Endereco - Atualizado Sucesso');
+        // REFATORADO: Usando sendMessage e mensagens.pedido.perguntaConfirmarEndereco
+        // A segunda mensagem usa a função de mensagem para formatar com o novo endereço
+        await sendMessage(sock, userId, { text: mensagens.pedido.perguntaConfirmarEndereco(novoEndereco) }, 'Confirmar Endereco - Confirmar Novo');
         console.log(`[Confirmar Endereço] Endereço atualizado e solicitando confirmação final para ${clientName}.`);
       } catch (sendError) {
         console.error(`[Confirmar Endereço] ERRO CRÍTICO: Falha ao enviar 'endereço atualizado' para ${clientName}:`, sendError);
@@ -134,7 +143,8 @@ async function handleConfirmarEndereco(sock, msg, estado) {
 
     } catch (e) {
       console.error(`[Confirmar Endereço] ERRO ao atualizar endereço para ${clientName}:`, e.response?.data || e.message);
-      return await finalizarConversa(mensagens.erros.erroInterno || 'Ocorreu um erro ao atualizar seu endereço. Tente novamente mais tarde.');
+      // REFATORADO: Acessando diretamente mensagens.erros.erroInterno
+      return await finalizarConversa(mensagens.erros.erroInterno, 'Erro Atualizar Endereco - Backend');
     }
   }
 
@@ -146,7 +156,8 @@ async function handleConfirmarEndereco(sock, msg, estado) {
     } else if (texto === 'não' || texto === 'nao') {
       estado.etapa = 'aguardando_novo_endereco';
       try {
-        await sock.sendMessage(userId, { text: mensagens.pedido.novoEnderecoPergunta || 'Ok. Por favor, digite seu novo endereço completo (Rua, Número, Bairro, Cidade, CEP).' });
+        // REFATORADO: Usando sendMessage e mensagens.pedido.novoEnderecoPergunta
+        await sendMessage(sock, userId, { text: mensagens.pedido.novoEnderecoPergunta }, 'Confirmar Endereco - Novo Endereco Apos Nao Confirmar');
         console.log(`[Confirmar Endereço] Solicitando novo endereço após não confirmar final para ${clientName}.`);
       } catch (sendError) {
         console.error(`[Confirmar Endereço] ERRO CRÍTICO: Falha ao enviar 'novo endereço após não confirmar' para ${clientName}:`, sendError);
@@ -154,7 +165,8 @@ async function handleConfirmarEndereco(sock, msg, estado) {
       return true;
     } else {
       try {
-        await sock.sendMessage(userId, { text: mensagens.pedido.respostaInvalidaEndereco || 'Por favor, responda "sim" ou "não" para confirmar o novo endereço.' });
+        // REFATORADO: Usando sendMessage e mensagens.pedido.respostaInvalidaEndereco
+        await sendMessage(sock, userId, { text: mensagens.pedido.respostaInvalidaEndereco }, 'Confirmar Endereco - Resposta Invalida Final');
         console.log(`[Confirmar Endereço] Resposta inválida para confirmação final de endereço de ${clientName}.`);
       } catch (sendError) {
         console.error(`[Confirmar Endereço] ERRO CRÍTICO: Falha ao enviar 'resposta inválida final' para ${clientName}:`, sendError);
@@ -166,7 +178,8 @@ async function handleConfirmarEndereco(sock, msg, estado) {
   // Se o bot chegar aqui e a etapa for desconhecida, pode ser um fallback ou erro
   console.warn(`[Confirmar Endereço] Etapa desconhecida ou não tratada para ${clientName}: ${estado.etapa}. Mensagem: "${texto}"`);
   // Opcional: Enviar uma mensagem de erro ou resetar o fluxo.
-  return await finalizarConversa(mensagens.erros.erroInterno || "Desculpe, ocorreu um erro inesperado no fluxo de endereço. Por favor, tente novamente digitando /pedir.");
+  // REFATORADO: Acessando diretamente mensagens.erros.erroInterno
+  return await finalizarConversa(mensagens.erros.erroInterno, 'Confirmar Endereco - Etapa Desconhecida');
 }
 
 module.exports = { handleConfirmarEndereco };

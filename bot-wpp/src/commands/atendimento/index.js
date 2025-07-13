@@ -1,8 +1,9 @@
-// bot-wpp/src/commands/atendimento/index.js (CORRIGIDO)
+// bot-wpp/src/commands/atendimento/index.js
 
 const { estadosDeConversa } = require('@config/state');
-const mensagens = require('@utils/mensagens');
+const mensagens = require('@utils/mensagens'); // Importa o objeto 'mensagens'
 const { io } = require('@bot/socket');
+const { sendMessage } = require('@core/messageSender'); // Importa a função sendMessage do seu módulo
 
 /**
  * Lida com o comando /atendimento, solicitando o atendimento humano.
@@ -14,10 +15,7 @@ async function handleAtendimentoCommand(sock, msg) {
   const userId = msg.key.remoteJid;
   const clientName = msg.pushName || userId.split('@')[0];
   
-  // --- CORREÇÃO AQUI: Obter o texto da mensagem de forma robusta ---
   const texto = msg.message?.conversation || msg.message?.extendedTextMessage?.text || ''; 
-  // Agora 'texto' terá o valor de '/atendimento' ou será uma string vazia se não houver texto.
-  // O .trim() será chamado apenas se 'texto' não for undefined.
 
   // Define o estado da conversa para aguardando_atendente
   estadosDeConversa.set(userId, { etapa: 'aguardando_atendente', dados: {} });
@@ -25,11 +23,12 @@ async function handleAtendimentoCommand(sock, msg) {
   console.log(`[Comando Atendimento] Cliente ${clientName} (${userId}) solicitou atendimento humano.`);
 
   // Envia a notificação para o backend via Socket.IO
-  try { // Adicionado try/catch para a emissão Socket.IO para depuração
+  // Esta mensagem NÃO vai para o cliente, então NÃO está no mensagens.js
+  try {
     io.emit('bot:chat_message', {
       userId,
       message: `**Solicitação de Atendimento:** O cliente *${clientName}* (${userId.split('@')[0]}) solicitou falar com um atendente.`,
-      type: "SISTEMA", // Indica que esta mensagem é do sistema do bot
+      type: "SISTEMA",
       clientName: clientName,
     });
     console.log(`[Comando Atendimento] Notificação de atendimento para ${clientName} ENVIADA ao backend.`);
@@ -37,20 +36,15 @@ async function handleAtendimentoCommand(sock, msg) {
     console.error(`[Comando Atendimento] ERRO ao emitir notificação para o backend para ${clientName}:`, socketError);
   }
 
-
   // Envia uma mensagem de confirmação para o cliente no WhatsApp
-  try { // Adicionado try/catch para sendMessage para depuração
-    await sock.sendMessage(userId, { text: mensagens.gerais.aguardeAtendimentoHumano });
-    console.log(`[Comando Atendimento] Mensagem de 'aguarde atendimento' ENVIADA para ${clientName}.`);
-  } catch (sendError) {
-    console.error(`[Comando Atendimento] ERRO CRÍTICO: Falha ao enviar 'aguarde atendimento' para ${clientName}:`, sendError);
-  }
+  // Agora usando a função centralizada sendMessage do messageSender
+  await sendMessage(sock, userId, { text: mensagens.gerais.aguardeAtendimentoHumano }, 'Comando Atendimento');
 
-  return true; // Indica que o comando foi tratado
+  return true;
 }
 
 module.exports = {
-  name: 'atendimento', // Nome do comando
+  name: 'atendimento',
   description: 'Solicita atendimento com um atendente humano.',
   handle: handleAtendimentoCommand,
 };

@@ -1,3 +1,15 @@
+# 13/07/25 11:30 feat: Refatorar e centralizar o sistema de mensagens do bot
+
+Melhora a arquitetura de mensagens do bot para maior consistência e manutenibilidade.
+Principais mudanças incluem:
+- Centralização do envio de mensagens via `messageSender.js`.
+- Consolidação de todas as strings de texto em `utils/mensagens.js`.
+- Ajustes em handlers e comandos (`pedir`, `status`, `cardapio`, `atendimento`, `conversationHandler`) para usar o novo sistema.
+- Correção na lógica de busca de status de pedido no backend para considerar pedidos ativos.
+- Normalização do ID do cliente (`@c.us`) para comunicação com o backend.
+
+---
+
 # 11/07/25 14:30 feat: Implementa sistema de notificações/som e atualização em tempo real de pedidos
 
 - Migra a lógica de Socket.IO e notificações para um contexto global (PedidosContext) para garantir uma única instância e estado consistente.

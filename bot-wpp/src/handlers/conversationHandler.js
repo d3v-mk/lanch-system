@@ -1,8 +1,9 @@
-// @handlers/conversationHandler.js (CORRIGIDO PARA MENSAGEM VAZIA NO PAINEL)
+// bot-wpp/src/handlers/conversationHandler.js
 
 const { estadosDeConversa } = require('@config/state');
 const { io } = require('@bot/socket');
 const mensagens = require('@utils/mensagens');
+const { sendMessage } = require('@core/messageSender'); // NOVO: Importa a função sendMessage
 
 async function handleConversationState(sock, msg, args) {
   const userId = msg.key.remoteJid;
@@ -60,7 +61,8 @@ async function handleConversationState(sock, msg, args) {
 
     // Responde ao cliente no WhatsApp
     try {
-      await sock.sendMessage(userId, { text: mensagens.gerais.aguardeAtendimentoHumano });
+      // REFATORADO: Usando sendMessage e mensagens.gerais.aguardeAtendimentoHumano
+      await sendMessage(sock, userId, { text: mensagens.gerais.aguardeAtendimentoHumano }, 'ConversationHandler - Aguarde Atendimento');
       console.log(`[ConversationHandler] Mensagem de 'aguarde atendimento' ENVIADA para ${clientName}.`);
     } catch (sendError) {
       console.error(`[ConversationHandler] ERRO CRÍTICO: Falha ao enviar 'aguarde atendimento' para ${clientName}:`, sendError);

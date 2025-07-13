@@ -1,8 +1,9 @@
-// src/commands/pedir/etapas/cadastroCliente.js (CORRIGIDO)
+// src/commands/pedir/etapas/cadastroCliente.js
 
 const { buscarCliente, criarCliente } = require('../services/clienteService'); // Certifique-se do caminho correto
 const { estadosDeConversa } = require('@config/state');
-const mensagens = require('@utils/mensagens'); // <-- NOVO: Importa o módulo de mensagens
+const mensagens = require('@utils/mensagens'); // OK: Importa o módulo de mensagens
+const { sendMessage } = require('@core/messageSender'); // NOVO: Importa a função sendMessage
 
 // CORREÇÃO: A ordem dos parâmetros deve ser (sock, msg, estado)
 async function handleCadastroCliente(sock, msg, estado) {
@@ -27,19 +28,20 @@ async function handleCadastroCliente(sock, msg, estado) {
         estado.etapa = 'aguardando_item'; // Cliente encontrado, pode ir para o próximo passo do pedido
         console.log(`[Cadastro Cliente] Cliente ${cliente.nome} (${telefone}) encontrado. Indo para 'aguardando_item'.`);
         // Opcional: Enviar uma mensagem de boas-vindas ao cliente existente
-        // await sock.sendMessage(userId, { text: mensagens.cadastro.clienteExistente || `Olá novamente, ${cliente.nome}! Qual item você gostaria de pedir?` });
+        // REFATORADO: Usando sendMessage e mensagens.cadastro.clienteExistente
+        await sendMessage(sock, userId, { text: mensagens.cadastro.clienteExistente }, 'Cadastro Cliente - Existente');
         return true; // Cliente tratado, continua o fluxo
       } else {
         estado.etapa = 'perguntar_nome'; // Cliente não encontrado, inicia o cadastro
         console.log(`[Cadastro Cliente] Cliente ${telefone} NÃO encontrado. Iniciando cadastro.`);
-        await sock.sendMessage(userId, {
-          text: mensagens.cadastro.perguntarNome || 'Olá! Para prosseguirmos com seu pedido, qual é o seu nome completo?',
-        });
+        // REFATORADO: Usando sendMessage e mensagens.cadastro.perguntarNome
+        await sendMessage(sock, userId, { text: mensagens.cadastro.perguntarNome }, 'Cadastro Cliente - Perguntar Nome');
         return true; // Continua no fluxo de cadastro
       }
     } catch (error) {
       console.error(`[Cadastro Cliente] ERRO ao buscar cliente ${telefone}:`, error);
-      await sock.sendMessage(userId, { text: mensagens.erros.erroInterno || 'Ocorreu um erro ao buscar seu cadastro. Tente novamente mais tarde.' });
+      // REFATORADO: Usando sendMessage e mensagens.erros.erroInterno
+      await sendMessage(sock, userId, { text: mensagens.erros.erroInterno }, 'Cadastro Cliente - Erro Busca');
       estadosDeConversa.delete(userId); // Limpa o estado em caso de erro crítico
       return false; // Indica falha no fluxo
     }
@@ -48,15 +50,15 @@ async function handleCadastroCliente(sock, msg, estado) {
   // --- Etapa 'perguntar_nome' ---
   if (estado.etapa === 'perguntar_nome') {
     if (!texto || texto.length < 2) { // Validação simples do nome
-      await sock.sendMessage(userId, { text: mensagens.cadastro.nomeInvalido || 'Nome inválido. Por favor, digite seu nome completo.' });
+      // REFATORADO: Usando sendMessage e mensagens.cadastro.nomeInvalido
+      await sendMessage(sock, userId, { text: mensagens.cadastro.nomeInvalido }, 'Cadastro Cliente - Nome Inválido');
       console.log(`[Cadastro Cliente] Nome inválido recebido de ${userId.split('@')[0]}.`);
       return true; // Continua na mesma etapa
     }
     estado.dados.nomeTemporario = texto; // Armazena o nome temporariamente
     estado.etapa = 'perguntar_endereco';
-    await sock.sendMessage(userId, {
-      text: mensagens.cadastro.perguntarEndereco || `Obrigado, ${texto}! Agora, por favor, me informe seu endereço completo (Rua, Número, Bairro, Cidade, CEP, Complemento se houver).`,
-    });
+    // REFATORADO: Usando sendMessage e mensagens.cadastro.perguntarEndereco
+    await sendMessage(sock, userId, { text: mensagens.cadastro.perguntarEndereco }, 'Cadastro Cliente - Perguntar Endereco');
     console.log(`[Cadastro Cliente] Nome '${texto}' recebido de ${userId.split('@')[0]}. Perguntando endereço.`);
     return true;
   }
@@ -64,7 +66,8 @@ async function handleCadastroCliente(sock, msg, estado) {
   // --- Etapa 'perguntar_endereco' ---
   if (estado.etapa === 'perguntar_endereco') {
     if (!texto || texto.length < 10) { // Validação simples do endereço
-      await sock.sendMessage(userId, { text: mensagens.cadastro.enderecoInvalido || 'Endereço inválido. Por favor, digite seu endereço completo e detalhado.' });
+      // REFATORADO: Usando sendMessage e mensagens.cadastro.enderecoInvalido
+      await sendMessage(sock, userId, { text: mensagens.cadastro.enderecoInvalido }, 'Cadastro Cliente - Endereco Inválido');
       console.log(`[Cadastro Cliente] Endereço inválido recebido de ${userId.split('@')[0]}.`);
       return true; // Continua na mesma etapa
     }
@@ -79,9 +82,8 @@ async function handleCadastroCliente(sock, msg, estado) {
       );
       estado.cliente = novoCliente; // Armazena o cliente completo no estado
       estado.etapa = 'aguardando_item'; // Cliente cadastrado, pode ir para o próximo passo do pedido
-      await sock.sendMessage(userId, {
-        text: mensagens.cadastro.cadastroSucesso || 'Cadastro realizado com sucesso! Agora, qual item você deseja pedir?',
-      });
+      // REFATORADO: Usando sendMessage e mensagens.cadastro.cadastroSucesso
+      await sendMessage(sock, userId, { text: mensagens.cadastro.cadastroSucesso }, 'Cadastro Cliente - Sucesso');
       console.log(`[Cadastro Cliente] Cliente ${novoCliente.nome} (${telefone}) cadastrado com sucesso.`);
       // Limpa os dados temporários após o cadastro
       delete estado.dados.nomeTemporario;
@@ -89,9 +91,8 @@ async function handleCadastroCliente(sock, msg, estado) {
       return true; // Cadastro concluído, continua o fluxo
     } catch (error) {
       console.error(`[Cadastro Cliente] ERRO ao criar cliente ${telefone}:`, error);
-      await sock.sendMessage(userId, {
-        text: mensagens.erros.erroInterno || 'Erro ao criar seu cadastro. Tente novamente mais tarde.',
-      });
+      // REFATORADO: Usando sendMessage e mensagens.erros.erroInterno
+      await sendMessage(sock, userId, { text: mensagens.erros.erroInterno }, 'Cadastro Cliente - Erro Criacao');
       estadosDeConversa.delete(userId); // Limpa o estado em caso de erro crítico
       return false; // Indica falha no fluxo
     }

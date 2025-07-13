@@ -2,9 +2,8 @@
 
 const { getUserId } = require('../../utils/messageUtils');
 const { sendMessage } = require('../../core/messageSender');
-const { getMensagem } = require('../../utils/mensagens'); // Importa a função getMensagem
+const mensagens = require('../../utils/mensagens'); // REFATORADO: Importa o objeto 'mensagens' diretamente
 
-// URL do seu backend (ajuste conforme sua configuração)
 const BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:3000';
 
 /**
@@ -20,16 +19,16 @@ const statusCommand = {
 
     try {
       // Faz uma requisição para o backend para obter o status do último pedido do cliente
-      const response = await fetch(`${BACKEND_API_URL}/api/pedidos/cliente/${userId}/latest-status`);
+      const response = await fetch(`${BACKEND_API_URL}/pedidos/cliente/${userId}/latest-status`);
       const data = await response.json();
 
       if (!response.ok) {
         if (response.status === 404) {
-          // CORREÇÃO: Envolver a string da mensagem em um objeto { text: ... }
-          await sendMessage(sock, userId, { text: getMensagem('statusPedidoNaoEncontrado') });
+          // CORREÇÃO AQUI: Mudando de 'pedidoNaoEncontrado' para 'naoEncontrado'
+          await sendMessage(sock, userId, { text: mensagens.status.naoEncontrado }, 'Status Comando - Nao Encontrado');
         } else {
-          // CORREÇÃO: Envolver a string da mensagem em um objeto { text: ... }
-          await sendMessage(sock, userId, { text: getMensagem('erros.erroGenerico') });
+          // REFATORADO: Acessando mensagens.erros.erroGenerico
+          await sendMessage(sock, userId, { text: mensagens.erros.erroGenerico }, 'Status Comando - Erro Generico Backend');
         }
         console.error(`[Comando /status] Erro ao buscar status para ${userId}:`, data.error || response.statusText);
         return;
@@ -37,15 +36,15 @@ const statusCommand = {
 
       // Se o pedido foi encontrado, envia o status para o cliente
       // Usamos o status retornado pelo backend diretamente para buscar a mensagem
-      const statusMensagem = getMensagem(`statusPedido_${data.status}`);
-      // CORREÇÃO: Envolver a string da mensagem em um objeto { text: ... }
-      await sendMessage(sock, userId, { text: statusMensagem });
+      // REFATORADO: Acessando mensagens.status[data.status]
+      const statusMensagem = mensagens.status[data.status] || mensagens.status.statusDesconhecido; // Adiciona fallback para status desconhecido
+      await sendMessage(sock, userId, { text: statusMensagem }, `Status Comando - Pedido ${data.status}`);
       console.log(`[Comando /status] Status do pedido para ${userId}: ${data.status}`);
 
     } catch (error) {
       console.error(`[Comando /status] Erro ao comunicar com o backend para ${userId}:`, error);
-      // CORREÇÃO: Envolver a string da mensagem em um objeto { text: ... }
-      await sendMessage(sock, userId, { text: getMensagem('erros.erroComunicacaoBackend') });
+      // REFATORADO: Acessando mensagens.erros.erroComunicacaoBackend
+      await sendMessage(sock, userId, { text: mensagens.erros.erroComunicacaoBackend }, 'Status Comando - Erro Comunicacao Backend');
     }
   },
 };

@@ -1,4 +1,4 @@
-// src/commands/pedir/fluxoPedido.js
+// bot-wpp/src/commands/pedir/fluxoPedido.js
 
 
 const { handleCadastroCliente } = require('./etapas/cadastroCliente');
@@ -7,7 +7,8 @@ const { handleEscolherQuantidade } = require('./etapas/escolherQuantidade');
 const { handleConfirmarPedido } = require('./etapas/confirmarPedido');
 const { handleConfirmarEndereco } = require('./etapas/confirmarEndereco');
 const { estadosDeConversa } = require('@config/state');
-const mensagens = require('@utils/mensagens'); // Certifique-se de que este caminho está correto
+const mensagens = require('@utils/mensagens'); // OK: O caminho para 'mensagens' já está correto
+const { sendMessage } = require('@core/messageSender'); // NOVO: Importa a função sendMessage
 
 // CORREÇÃO: A ordem dos parâmetros deve ser (sock, msg, args, estado)
 async function fluxoPedido(sock, msg, args, estado) {
@@ -61,14 +62,16 @@ async function fluxoPedido(sock, msg, args, estado) {
     console.log(`[Fluxo Pedido] Em etapa 'aguardando_algo_mais' para ${clientName}.`);
     if (textoLowerCase === 'não' || textoLowerCase === 'nao') {
       if (!estado.dados.carrinho || estado.dados.carrinho.length === 0) {
-        await sock.sendMessage(userId, { text: mensagens.erros.carrinhoVazio || 'Seu carrinho está vazio. Por favor, comece um novo pedido digitando /pedir.' });
+        // REFATORADO: Usando sendMessage e mensagens.erros.carrinhoVazio
+        await sendMessage(sock, userId, { text: mensagens.erros.carrinhoVazio }, 'Fluxo Pedido - Carrinho Vazio');
         estadosDeConversa.delete(userId);
         return false;
       }
       estado.etapa = 'aguardando_quantidade_carrinho'; // Ou 'confirmar' se não há mais itens para quantidade
       const itemParaProcessar = estado.dados.carrinho.find(item => item.quantidade === 0);
       if (itemParaProcessar) {
-        await sock.sendMessage(userId, { text: `Certo! Agora, qual a quantidade de *${itemParaProcessar.nome}*?` });
+        // REFATORADO: Mensagem dinâmica agora é uma função no mensagens.pedido
+        await sendMessage(sock, userId, { text: mensagens.pedido.perguntarQuantidade(itemParaProcessar.nome) }, 'Fluxo Pedido - Perguntar Quantidade');
       } else {
         estado.etapa = 'confirmar'; // Se por algum motivo já não tiver itens, vai direto pra confirmar
         console.log(`[Fluxo Pedido] Todos os itens com quantidade, indo para 'confirmar'.`);
@@ -129,7 +132,8 @@ async function fluxoPedido(sock, msg, args, estado) {
   console.log('🚨 tipo: ', typeof estado.etapa);
   // Se chegou aqui, a etapa não foi reconhecida.
   // Opcional: Enviar uma mensagem de erro ou resetar o fluxo.
-  await sock.sendMessage(userId, { text: mensagens.erros.erroInterno || "Desculpe, ocorreu um erro inesperado no fluxo do pedido. Por favor, tente novamente digitando /pedir." });
+  // REFATORADO: Usando sendMessage e mensagens.erros.erroInterno
+  await sendMessage(sock, userId, { text: mensagens.erros.erroInterno }, 'Fluxo Pedido - Etapa Não Reconhecida');
   estadosDeConversa.delete(userId); // Limpa o estado para evitar loops
   return false; // Indica que o fluxo terminou com erro
 }

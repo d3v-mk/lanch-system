@@ -1,6 +1,7 @@
-// src/commands/pedir/etapas/escolherQuantidade.js (CORRIGIDO)
+// src/commands/pedir/etapas/escolherQuantidade.js
 
-const mensagens = require('@utils/mensagens'); // Importa o módulo de mensagens
+const mensagens = require('@utils/mensagens'); // OK: Importa o módulo de mensagens
+const { sendMessage } = require('@core/messageSender'); // NOVO: Importa a função sendMessage
 
 // CORREÇÃO: A ordem dos parâmetros deve ser (sock, msg, estado)
 async function handleEscolherQuantidade(sock, msg, estado) {
@@ -29,7 +30,8 @@ async function handleEscolherQuantidade(sock, msg, estado) {
 
   // Validação da quantidade
   if (isNaN(quantidadeDigitada) || quantidadeDigitada <= 0) {
-    await sock.sendMessage(userId, { text: mensagens.pedido.quantidadeInvalida || `Por favor, digite uma quantidade numérica válida para *${itemAtual.nome}* (um número maior que zero).` });
+    // REFATORADO: Usando sendMessage e mensagens.pedido.quantidadeInvalida
+    await sendMessage(sock, userId, { text: mensagens.pedido.quantidadeInvalida(itemAtual.nome) }, 'Escolher Quantidade - Quantidade Invalida');
     console.log(`[Escolher Quantidade] Quantidade inválida '${texto}' recebida para ${clientName}.`);
     return true; // Permanece na mesma etapa e retorna true para aguardar nova entrada
   }
@@ -44,7 +46,8 @@ async function handleEscolherQuantidade(sock, msg, estado) {
   if (proximoItemIndex !== -1) {
     // Ainda há itens para perguntar a quantidade
     const proximoItem = estado.dados.carrinho[proximoItemIndex];
-    await sock.sendMessage(userId, { text: mensagens.pedido.perguntarQuantidade.replace('ITEM_NOME_PLACEHOLDER', proximoItem.nome) || `Ok. Agora, qual a quantidade de *${proximoItem.nome}*?` });
+    // REFATORADO: Usando sendMessage e mensagens.pedido.perguntarQuantidade (que é uma função)
+    await sendMessage(sock, userId, { text: mensagens.pedido.perguntarQuantidade(proximoItem.nome) }, 'Escolher Quantidade - Proximo Item');
     // Mantém a etapa e retorna true para continuar
     estado.etapa = 'aguardando_quantidade_carrinho';
     console.log(`[Escolher Quantidade] Ainda há itens para quantificar para ${clientName}.`);
